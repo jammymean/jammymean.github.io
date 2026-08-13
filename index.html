@@ -258,6 +258,21 @@ textarea:focus{border-color:var(--t3)}
 /* Equity curve sizing helpers */
 .eq-panel-auto{display:flex;flex-direction:column;min-height:0}
 .eq-outer{position:relative;flex:1;min-height:120px}
+.eq-col-auto{display:flex;flex-direction:column;min-height:0}
+/* Breakeven pill (result === 0, neither win nor loss) */
+.pbe{background:var(--s2);color:var(--t2);border:.5px solid var(--bd)}
+/* Trade log filter bar */
+.logfilterbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:.75rem}
+.logfilterbar select{padding:6px 10px;font-size:var(--fsm);font-family:var(--sans);border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t);cursor:pointer}
+.logfilterbar select:focus{border-color:var(--t3);outline:none}
+/* Sortable table headers */
+thead th.sortable{cursor:pointer;user-select:none;transition:color .15s}
+thead th.sortable:hover{color:var(--t)}
+thead th.sortable.sorted{color:var(--t)}
+.sortarrow{color:var(--p);margin-left:3px}
+/* Fixed-width rules-score pill so trailing icons never shift with digit count */
+.spill{min-width:42px;justify-content:center}
+.rulesflex{display:flex;align-items:center;gap:5px}
 </style>
 </head>
 <body>
@@ -318,6 +333,8 @@ function tickerInfo(symbol){return TICKERS.find(t=>t.symbol===symbol)||null;}
 
 let trades=[],reflections=[],dq=DQ_DEFAULT.map(d=>({...d})),tab="log",showForm=false,editingDq=false,editingId=null,showRefForm=false,expandedId=null;
 let periodMode="all",periodAnchor=new Date(),customFrom="",customTo="";
+let logSort={col:"date",dir:"desc"};
+let logFilters={ticker:"",setup:"",wl:"",process:"",lossCat:""};
 let resultManual=false;
 
 // form state — kept separate so inputs are never re-rendered while typing
@@ -382,7 +399,7 @@ function load(){
 function parseYMD(s){const p=s.split("-").map(Number);return new Date(p[0],p[1]-1,p[2]);}
 function ymd(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
 function dispDate(s){if(!s)return"—";const p=s.split("-");if(p.length!==3)return s;return `${p[2]}/${p[1]}/${p[0].slice(2)}`;}
-function axisDate(s){if(!s)return"";const p=s.split("-");if(p.length!==3)return s;return `${parseInt(p[1],10)}/${parseInt(p[2],10)}`;}
+function axisDate(s){if(!s)return"";const p=s.split("-");if(p.length!==3)return s;return `${p[2]}/${p[1]}`;}
 function startOfWeek(d){const r=new Date(d);r.setHours(0,0,0,0);r.setDate(r.getDate()-r.getDay());return r;}
 function endOfWeek(d){const s=startOfWeek(d);const r=new Date(s);r.setDate(r.getDate()+6);r.setHours(23,59,59,999);return r;}
 function startOfMonth(d){return new Date(d.getFullYear(),d.getMonth(),1);}
@@ -488,7 +505,7 @@ function enrich(t){
   const rr=risk&&reward&&risk!==0?reward/risk:null;
   const dirPts=!isNaN(e)&&!isNaN(ex)?(direction==="short"?(e-ex):(ex-e)):null;
   const realizedR=dirPts!==null&&riskPts?dirPts/riskPts:null;
-  const wl=!isNaN(r)?(r>=0?"Win":"Loss"):null;
+  const wl=!isNaN(r)?(r>0?"Win":r<0?"Loss":"BE"):null;
   const ra=t.ra||{};
   const ans=RULES.filter(x=>ra[x.id]!==null&&ra[x.id]!==undefined);
   const fol=ans.filter(x=>ra[x.id]==="yes");
@@ -502,7 +519,7 @@ function enrich(t){
 
 function calcStats(list){
   const n=list.length,wins=list.filter(t=>t.wl==="Win"),losses=list.filter(t=>t.wl==="Loss");
-  const wc=wins.length,lc=losses.length,wr=n>0?wc/n:null,lr=n>0?lc/n:null;
+  const wc=wins.length,lc=losses.length,decided=wc+lc,wr=decided>0?wc/decided:null,lr=decided>0?lc/decided:null;
   const aw=wc>0?wins.reduce((a,t)=>a+parseFloat(t.result),0)/wc:null;
   const al=lc>0?Math.abs(losses.reduce((a,t)=>a+parseFloat(t.result),0)/lc):null;
   const rrv=list.filter(t=>t.rr!==null).map(t=>t.rr);
@@ -579,7 +596,7 @@ function equityPoints(list){
   return[{date:null,cum:0},...pts];
 }
 function computeStreaks(list){
-  const chron=chronoSort(list).filter(t=>t.wl);
+  const chron=chronoSort(list).filter(t=>t.wl==="Win"||t.wl==="Loss");
   let maxWin=0,maxLoss=0,curWin=0,curLoss=0;
   chron.forEach(t=>{
     if(t.wl==="Win"){curWin++;curLoss=0;if(curWin>maxWin)maxWin=curWin;}
@@ -601,7 +618,7 @@ function tickerBreakdown(list){
     map[k].count++;
     const r=parseFloat(t.result);
     if(!isNaN(r))map[k].net+=r;
-    if(t.wl){map[k].withWl++;if(t.wl==="Win")map[k].wins++;}
+    if(t.wl==="Win"||t.wl==="Loss"){map[k].withWl++;if(t.wl==="Win")map[k].wins++;}
     if(t.realizedR!==null){map[k].rrSum+=t.realizedR;map[k].rrCount++;}
   });
   return Object.values(map).sort((a,b)=>b.count-a.count);
@@ -613,7 +630,7 @@ function dowBreakdown(list){
     buckets[idx].count++;
     const r=parseFloat(t.result);
     if(!isNaN(r))buckets[idx].net+=r;
-    if(t.wl){buckets[idx].withWl++;if(t.wl==="Win")buckets[idx].wins++;}
+    if(t.wl==="Win"||t.wl==="Loss"){buckets[idx].withWl++;if(t.wl==="Win")buckets[idx].wins++;}
     if(t.realizedR!==null){buckets[idx].rrSum+=t.realizedR;buckets[idx].rrCount++;}
   });
   return buckets.filter(b=>b.count>0);
@@ -660,7 +677,7 @@ function sessionBreakdown(list){
     b.count++;
     const r=parseFloat(t.result);
     if(!isNaN(r))b.net+=r;
-    if(t.wl){b.withWl++;if(t.wl==="Win")b.wins++;}
+    if(t.wl==="Win"||t.wl==="Loss"){b.withWl++;if(t.wl==="Win")b.wins++;}
     if(t.realizedR!==null){b.rrSum+=t.realizedR;b.rrCount++;}
   });
   return buckets.filter(b=>b.count>0);
@@ -673,6 +690,32 @@ function breakdownRowH(label,count,wins,withWl,rrSum,rrCount,net){
   return`<div class="rsrow"><span class="rsname">${label}<br/><span style="color:var(--t3);font-size:var(--fxs)">${meta}</span></span><span class="rspct" style="color:${col}">${cuNoSign(net)}</span></div>`;
 }
 
+// ── Axis scale — rounded ("nice") tick values ─────────────────────────────────
+// Produces whole-dollar gridlines at round intervals so the axis never shows
+// arbitrary decimals like $565.92, and so the frame only ever moves in whole
+// steps rather than sliding on every new trade.
+//   · all values >= 0  → floor pinned at exactly 0 (no wasted room below zero)
+//   · any value < 0    → headroom added below as well as above
+function niceAxis(dataMin,dataMax,targetTicks){
+  targetTicks=targetTicks||4;
+  let lo=Math.min(0,dataMin),hi=Math.max(0,dataMax);
+  if(hi===lo)hi=lo+100;
+  const rawStep=(hi-lo)/targetTicks;
+  const mag=Math.pow(10,Math.floor(Math.log10(Math.abs(rawStep)||1)));
+  const norm=rawStep/mag;
+  let step=(norm<=1?1:norm<=2?2:norm<=2.5?2.5:norm<=5?5:10)*mag;
+  step=Math.max(1,Math.round(step));
+  let niceHi=Math.ceil(hi/step)*step;
+  let niceLo=lo<0?Math.floor(lo/step)*step:0;
+  if(niceHi<=hi)niceHi+=step;                    // always keep headroom above the peak
+  if(lo<0&&niceLo>=lo)niceLo-=step;              // and below the trough, but only if we ever went negative
+  const ticks=[];
+  for(let v=niceLo;v<=niceHi+0.0001;v+=step)ticks.push(Math.round(v));
+  if(ticks.indexOf(0)===-1&&niceLo<0&&niceHi>0)ticks.push(0);
+  ticks.sort((a,b)=>a-b);
+  return{min:niceLo,max:niceHi,step,ticks};
+}
+
 // ── Equity curve — pixel-matched, non-distorting SVG ──────────────────────────
 // The viewBox is built from the container's ACTUAL measured pixel size (see
 // layoutDashboardChart), and the <svg> also carries explicit width/height
@@ -681,17 +724,17 @@ function breakdownRowH(label,count,wins,withWl,rrSum,rrCount,net){
 // which is what caused axis text/lines to look vertically stretched before.
 function buildEquityCurveSVG(points,w,h){
   w=Math.max(60,Math.round(w));h=Math.max(60,Math.round(h));
-  const padL=64,padR=12,padT=14,padB=24;
-  const plotW=Math.max(10,w-padL-padR),plotH=Math.max(10,h-padT-padB);
   const real=points.filter(p=>p.date!==null);
   if(real.length<1){
     return`<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:var(--fsm);color:var(--t3);text-align:center;padding:0 16px">no trades with a result yet — the equity curve appears once you log some</div>`;
   }
   const vals=points.map(p=>p.cum);
-  let min=Math.min(0,...vals),max=Math.max(0,...vals);
-  if(min===max){min-=10;max+=10;}
-  const pad=(max-min)*0.08||10;
-  max+=pad;min-=pad;
+  const ax=niceAxis(Math.min(...vals),Math.max(...vals));
+  const min=ax.min,max=ax.max;
+  // Gutter widens with the longest label so big balances never clip.
+  const longest=ax.ticks.reduce((a,v)=>Math.max(a,cu(v).length),0);
+  const padL=Math.max(52,longest*6.6+16),padR=12,padT=14,padB=24;
+  const plotW=Math.max(10,w-padL-padR),plotH=Math.max(10,h-padT-padB);
   const xStep=points.length>1?plotW/(points.length-1):plotW;
   const yFor=v=>padT+plotH-((v-min)/(max-min))*plotH;
   const coords=points.map((p,i)=>[padL+i*xStep,yFor(p.cum)]);
@@ -715,10 +758,10 @@ function buildEquityCurveSVG(points,w,h){
     }
   }
 
-  const ticks=[max,0,min];
-  const tickLines=ticks.map(v=>{
+  const tickLines=ax.ticks.map(v=>{
     const y=yFor(v).toFixed(1);
-    return`<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="var(--bd)" stroke-width="1" stroke-dasharray="3,3"/><text x="${padL-10}" y="${(parseFloat(y)+4).toFixed(1)}" text-anchor="end" font-size="11" font-weight="600" fill="var(--t2)" font-family="Segoe UI,-apple-system,sans-serif">${cu(v)}</text>`;
+    const isZero=v===0;
+    return`<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="var(--bd)" stroke-width="${isZero?1:0.75}" stroke-dasharray="${isZero?"none":"3,3"}"/><text x="${padL-10}" y="${(parseFloat(y)+4).toFixed(1)}" text-anchor="end" font-size="11" font-weight="300" fill="var(--t3)">${cu(v)}</text>`;
   }).join("");
 
   const realIdxs=points.map((p,i)=>p.date?i:null).filter(i=>i!==null);
@@ -729,13 +772,13 @@ function buildEquityCurveSVG(points,w,h){
     for(let k=0;k<nTicks;k++)xTickIdxs.push(realIdxs[Math.round(k*(realIdxs.length-1)/(nTicks-1))]);
     xTickIdxs=[...new Set(xTickIdxs)];
   }
-  const xTicks=xTickIdxs.map(i=>`<text x="${coords[i][0].toFixed(1)}" y="${h-6}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--t2)" font-family="Segoe UI,-apple-system,sans-serif">${axisDate(points[i].date)}</text>`).join("");
+  const xTicks=xTickIdxs.map(i=>`<text x="${coords[i][0].toFixed(1)}" y="${h-6}" text-anchor="middle" font-size="11" font-weight="300" fill="var(--t3)">${axisDate(points[i].date)}</text>`).join("");
 
   const hitPts=points.map((p,i)=>p.date?{x:Number(coords[i][0].toFixed(1)),y:Number(coords[i][1].toFixed(1)),date:p.date,val:p.cum}:null).filter(Boolean);
   const dataAttr=encodeURIComponent(JSON.stringify(hitPts));
 
   return`<div class="eq-wrap" data-points="${dataAttr}" style="position:relative;width:100%;height:100%">
-  <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="width:100%;height:100%;display:block">
+  <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="width:100%;height:100%;display:block;font-family:var(--sans)">
     ${tickLines}
     ${lineEls}
     ${xTicks}
@@ -791,12 +834,12 @@ function initEquityHover(wrap){
 let dashboardEquityPoints=[{date:null,cum:0}];
 function layoutDashboardChart(){
   const statCol=document.getElementById("dash-stat-col");
-  const panel=document.getElementById("dash-eq-panel");
+  const eqCol=document.getElementById("dash-eq-col");
   const outer=document.getElementById("dash-eq-outer");
-  if(!statCol||!panel||!outer)return;
-  panel.style.height="auto";
+  if(!statCol||!eqCol||!outer)return;
+  eqCol.style.height="auto";
   const targetH=statCol.offsetHeight;
-  panel.style.height=targetH+"px";
+  eqCol.style.height=targetH+"px";
   const w=outer.clientWidth,h=outer.clientHeight;
   if(w<20||h<20)return;
   outer.innerHTML=buildEquityCurveSVG(dashboardEquityPoints,w,h);
@@ -836,7 +879,10 @@ function addTrade(){
   const resEl=document.getElementById("fi-result");if(resEl)form.result=resEl.value;
   const lcEl=document.getElementById("fi-losscat");if(lcEl)form.lossCat=lcEl.value;
   const cmEl=document.getElementById("fi-comments");if(cmEl)form.comments=cmEl.value;
-  if(!form.ticker||!form.entry)return;
+  if(!form.ticker||!form.entry){
+    alert("Please enter at least a ticker and entry price before logging this trade.");
+    return;
+  }
   const resNum=parseFloat(form.result);
   if(!isNaN(resNum)&&resNum<0&&!form.lossCat){
     alert("This trade is a loss — please select a loss category (Good / Execution / Decision / Emotional) before logging it.");
@@ -851,7 +897,7 @@ function addTrade(){
   form=blank();showForm=false;save();render();
 }
 
-function del(id){trades=trades.filter(t=>t.id!==id);if(expandedId===id)expandedId=null;save();render();}
+function del(id){if(!confirm("Delete this trade? This can't be undone."))return;trades=trades.filter(t=>t.id!==id);if(expandedId===id)expandedId=null;save();render();}
 function setTab(t){tab=t;render();}
 function tog(){
   if(showForm)editingId=null;
@@ -897,7 +943,7 @@ function saveReflection(){
   }
   refForm=blankRef();editingRefId=null;showRefForm=false;save();render();
 }
-function delReflection(id){reflections=reflections.filter(r=>r.id!==id);save();render();}
+function delReflection(id){if(!confirm("Delete this reflection? This can't be undone."))return;reflections=reflections.filter(r=>r.id!==id);save();render();}
 function getFilteredReflections(){
   const r=periodRange();
   if(!r)return reflections.slice();
@@ -1073,7 +1119,7 @@ function expSummaryHTML(){
     return`<div class="brow"><span class="browlabel">${rl.text}</span><div class="browbar"><div class="browfill" style="width:${rl.pct!==null?(rl.pct*100).toFixed(0)+"%":"0%"};background:${c}"></div></div><span class="browpct" style="color:${c}">${rl.pct!==null?pc(rl.pct):"—"}</span></div>`;
   }).join("");
   const lossRows=s.lcStats.map(c=>{
-    const col=c.id==="good"?"var(--g)":c.id==="exec"?"var(--a)":c.id==="dec"?"var(--a)":"var(--r)";
+    const col=c.id==="good"?"var(--g)":c.id==="exec"?"var(--a)":c.id==="dec"?"var(--p)":"var(--r)";
     const dolCol=c.dollars>0?"var(--r)":"var(--t3)";
     return`<div class="losscat-item" title="${c.hint}">
       <div class="lcrow"><div class="lcname">${c.label}</div><div class="lcmeta" style="color:${dolCol}">${c.count} · ${c.pct!==null?pc(c.pct):"—"} · ${cuNoSign(c.dollars)}</div></div>
@@ -1126,6 +1172,7 @@ function expSummaryHTML(){
   --g:#7FCBA0;--gbg:rgba(127,203,160,0.14);
   --r:#E69A9A;--rbg:rgba(230,154,154,0.14);
   --a:#E4BD7D;--abg:rgba(228,189,125,0.15);
+  --p:#B4ABE8;--pbg:rgba(180,171,232,0.15);
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#121214;color:var(--t);padding:2rem 1.25rem 4rem;font-size:13px}
 .wrap{max-width:860px;margin:0 auto}
@@ -1157,6 +1204,7 @@ h1{font-size:22px;font-weight:600;margin-bottom:4px}
 .bpanel{background:rgba(255,255,255,0.045);border:.5px solid var(--bd);border-radius:12px;padding:1rem}
 .eq-panel-auto{display:flex;flex-direction:column;min-height:0}
 .eq-outer{position:relative;flex:1;min-height:140px}
+.eq-col-auto{display:flex;flex-direction:column;min-height:0}
 .rsrow{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:.5px solid var(--bd);font-size:12px;gap:10px}
 .rsrow:last-child{border-bottom:none}
 .rsname{color:var(--t2);flex:1}
@@ -1211,9 +1259,11 @@ h1{font-size:22px;font-weight:600;margin-bottom:4px}
     <p class="seclab" style="margin-top:0">stats</p>
     <div class="sgrid2x3">${statCards}</div>
   </div>
-  <div class="bpanel eq-panel-auto" id="exp-eq-panel" style="margin-bottom:0">
+  <div class="eq-col-auto" id="exp-eq-col">
     <p class="seclab" style="margin-top:0">equity curve</p>
-    <div class="eq-outer" id="exp-eq-outer"></div>
+    <div class="bpanel eq-panel-auto" id="exp-eq-panel" style="margin-bottom:0;flex:1">
+      <div class="eq-outer" id="exp-eq-outer"></div>
+    </div>
   </div>
 </div>
 ${calendarH(en)}
@@ -1238,22 +1288,41 @@ var EQ_POINTS=${eqPointsJSON};
 function openLB(src){document.getElementById("lbox-img").src=src;document.getElementById("lbox").classList.add("show");}
 function closeLB(){document.getElementById("lbox").classList.remove("show");document.getElementById("lbox-img").src="";}
 function fmtDate(s){if(!s)return"Start";var p=s.split("-");return p[2]+"/"+p[1]+"/"+p[0].slice(2);}
+function fmtAxisDate(s){if(!s)return"";var p=s.split("-");return p[2]+"/"+p[1];}
 function fmtCur(n){if(n===null||isNaN(n))return"—";var a=Math.abs(n).toFixed(2);return n<0?"-$"+a:"$"+a;}
 // Same pixel-matched approach as the live app: viewBox == measured container size,
 // so nothing gets stretched. Recomputed on load and on resize.
+function niceAxis(dataMin,dataMax,targetTicks){
+  targetTicks=targetTicks||4;
+  var lo=Math.min(0,dataMin),hi=Math.max(0,dataMax);
+  if(hi===lo)hi=lo+100;
+  var rawStep=(hi-lo)/targetTicks;
+  var mag=Math.pow(10,Math.floor(Math.log10(Math.abs(rawStep)||1)));
+  var norm=rawStep/mag;
+  var step=(norm<=1?1:norm<=2?2:norm<=2.5?2.5:norm<=5?5:10)*mag;
+  step=Math.max(1,Math.round(step));
+  var niceHi=Math.ceil(hi/step)*step;
+  var niceLo=lo<0?Math.floor(lo/step)*step:0;
+  if(niceHi<=hi)niceHi+=step;
+  if(lo<0&&niceLo>=lo)niceLo-=step;
+  var ticks=[];
+  for(var v=niceLo;v<=niceHi+0.0001;v+=step)ticks.push(Math.round(v));
+  if(ticks.indexOf(0)===-1&&niceLo<0&&niceHi>0)ticks.push(0);
+  ticks.sort(function(a,b){return a-b;});
+  return{min:niceLo,max:niceHi,step:step,ticks:ticks};
+}
 function buildEqSVG(points,w,h){
   w=Math.max(60,Math.round(w));h=Math.max(60,Math.round(h));
-  var padL=64,padR=12,padT=14,padB=24;
-  var plotW=Math.max(10,w-padL-padR),plotH=Math.max(10,h-padT-padB);
   var real=points.filter(function(p){return p.date!==null;});
   if(real.length<1){
     return'<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:var(--t3);text-align:center;padding:0 16px">no trades with a result yet</div>';
   }
   var vals=points.map(function(p){return p.cum;});
-  var min=Math.min.apply(null,[0].concat(vals)),max=Math.max.apply(null,[0].concat(vals));
-  if(min===max){min-=10;max+=10;}
-  var pad=(max-min)*0.08||10;
-  max+=pad;min-=pad;
+  var ax=niceAxis(Math.min.apply(null,vals),Math.max.apply(null,vals));
+  var min=ax.min,max=ax.max;
+  var longest=ax.ticks.reduce(function(a,v){return Math.max(a,fmtCur(v).length);},0);
+  var padL=Math.max(52,longest*6.6+16),padR=12,padT=14,padB=24;
+  var plotW=Math.max(10,w-padL-padR),plotH=Math.max(10,h-padT-padB);
   var xStep=points.length>1?plotW/(points.length-1):plotW;
   function yFor(v){return padT+plotH-((v-min)/(max-min))*plotH;}
   var coords=points.map(function(p,i){return[padL+i*xStep,yFor(p.cum)];});
@@ -1275,10 +1344,9 @@ function buildEqSVG(points,w,h){
       lineEls+='<line x1="'+xm.toFixed(1)+'" y1="'+yZero.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+y1.toFixed(1)+'" stroke="'+(v1>=0?"var(--g)":"var(--r)")+'" stroke-width="2" stroke-linecap="round"/>';
     }
   }
-  var ticks=[max,0,min];
-  var tickLines=ticks.map(function(v){
-    var y=yFor(v).toFixed(1);
-    return'<line x1="'+padL+'" y1="'+y+'" x2="'+(w-padR)+'" y2="'+y+'" stroke="var(--bd)" stroke-width="1" stroke-dasharray="3,3"/><text x="'+(padL-10)+'" y="'+(parseFloat(y)+4).toFixed(1)+'" text-anchor="end" font-size="11" font-weight="600" fill="var(--t2)">'+fmtCur(v)+'</text>';
+  var tickLines=ax.ticks.map(function(v){
+    var y=yFor(v).toFixed(1),isZero=v===0;
+    return'<line x1="'+padL+'" y1="'+y+'" x2="'+(w-padR)+'" y2="'+y+'" stroke="var(--bd)" stroke-width="'+(isZero?1:0.75)+'" stroke-dasharray="'+(isZero?"none":"3,3")+'"/><text x="'+(padL-10)+'" y="'+(parseFloat(y)+4).toFixed(1)+'" text-anchor="end" font-size="11" font-weight="300" fill="var(--t3)">'+fmtCur(v)+'</text>';
   }).join("");
   var realIdxs=[];points.forEach(function(p,i){if(p.date)realIdxs.push(i);});
   var xTickIdxs=[];
@@ -1287,11 +1355,11 @@ function buildEqSVG(points,w,h){
     for(var k=0;k<5;k++)xTickIdxs.push(realIdxs[Math.round(k*(realIdxs.length-1)/4)]);
     xTickIdxs=xTickIdxs.filter(function(v,idx,arr){return arr.indexOf(v)===idx;});
   }
-  var xTicks=xTickIdxs.map(function(i){return'<text x="'+coords[i][0].toFixed(1)+'" y="'+(h-6)+'" text-anchor="middle" font-size="11" font-weight="600" fill="var(--t2)">'+fmtDate(points[i].date).slice(0,5)+'</text>';}).join("");
+  var xTicks=xTickIdxs.map(function(i){return'<text x="'+coords[i][0].toFixed(1)+'" y="'+(h-6)+'" text-anchor="middle" font-size="11" font-weight="300" fill="var(--t3)">'+fmtAxisDate(points[i].date)+'</text>';}).join("");
   var hitPts=[];points.forEach(function(p,i){if(p.date)hitPts.push({x:Number(coords[i][0].toFixed(1)),y:Number(coords[i][1].toFixed(1)),date:p.date,val:p.cum});});
   var dataAttr=encodeURIComponent(JSON.stringify(hitPts));
   return'<div class="eq-wrap" data-points="'+dataAttr+'" style="position:relative;width:100%;height:100%">'+
-  '<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" style="width:100%;height:100%;display:block">'+
+  '<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" style="width:100%;height:100%;display:block;font-family:inherit">'+
     tickLines+lineEls+xTicks+
     '<circle cx="'+lastC[0].toFixed(1)+'" cy="'+lastC[1].toFixed(1)+'" r="3.5" fill="'+lastColor+'"/>'+
     '<line class="eq-cross" x1="0" y1="'+padT+'" x2="0" y2="'+(h-padB)+'" stroke="var(--t3)" stroke-width="1" stroke-dasharray="2,2" opacity="0"/>'+
@@ -1333,12 +1401,12 @@ function initEquityHover(wrap){
 }
 function layoutExpChart(){
   var statCol=document.getElementById("exp-stat-col");
-  var panel=document.getElementById("exp-eq-panel");
+  var eqCol=document.getElementById("exp-eq-col");
   var outer=document.getElementById("exp-eq-outer");
-  if(!statCol||!panel||!outer)return;
-  panel.style.height="auto";
+  if(!statCol||!eqCol||!outer)return;
+  eqCol.style.height="auto";
   var targetH=statCol.offsetHeight;
-  panel.style.height=targetH+"px";
+  eqCol.style.height=targetH+"px";
   var w=outer.clientWidth,h=outer.clientHeight;
   if(w<20||h<20)return;
   outer.innerHTML=buildEqSVG(EQ_POINTS,w,h);
@@ -1619,13 +1687,114 @@ function expandRowH(t){
     </div>
   </div></td></tr>`;
 }
+// ── Trade log filter/sort ────────────────────────────────────────────────────
+// Applies only to the trade-log table view. Dashboard stats keep using the
+// period-filtered list untouched, per the existing global period bar.
+function setLogSort(col){
+  if(logSort.col===col){logSort.dir=logSort.dir==="asc"?"desc":"asc";}
+  else{logSort.col=col;logSort.dir=col==="date"?"desc":"asc";}
+  render();
+}
+function setLogFilter(key,val){logFilters[key]=val;render();}
+function clearLogFilters(){logFilters={ticker:"",setup:"",wl:"",process:"",lossCat:""};render();}
+function hasLogFilters(){return Object.values(logFilters).some(v=>v);}
+function uniqueTickersUsed(){
+  return Array.from(new Set(trades.map(t=>t.ticker.toUpperCase()))).sort();
+}
+function applyLogFilters(list){
+  return list.filter(t=>{
+    if(logFilters.ticker&&t.ticker.toUpperCase()!==logFilters.ticker)return false;
+    if(logFilters.setup&&t.setup!==logFilters.setup)return false;
+    if(logFilters.wl&&t.wl!==logFilters.wl)return false;
+    if(logFilters.process){
+      if(t.isGood===null)return false;
+      if(logFilters.process==="good"&&!t.isGood)return false;
+      if(logFilters.process==="bad"&&t.isGood)return false;
+    }
+    if(logFilters.lossCat&&t.lossCat!==logFilters.lossCat)return false;
+    return true;
+  });
+}
+function applyLogSort(list){
+  const{col,dir}=logSort,mult=dir==="asc"?1:-1;
+  const val=t=>{
+    switch(col){
+      case"date":return t.date||"";
+      case"ticker":return t.ticker?t.ticker.toUpperCase():"";
+      case"setup":return t.setup||"";
+      case"result":{const r=parseFloat(t.result);return isNaN(r)?-Infinity:r;}
+      case"wl":return t.wl||"";
+      case"rules":return t.rs===null?-1:t.rs;
+      case"process":return t.isGood===null?-1:(t.isGood?1:0);
+      default:return t.date||"";
+    }
+  };
+  return list.slice().sort((a,b)=>{
+    const av=val(a),bv=val(b);
+    if(av<bv)return-1*mult;
+    if(av>bv)return 1*mult;
+    return(b.date||"").localeCompare(a.date||""); // stable secondary: newest first
+  });
+}
 function logH(en){
-  const filteredOut=periodMode!=="all"&&trades.length>0&&en.length===0;
+  const logList=applyLogSort(applyLogFilters(en));
+  const filtersOn=hasLogFilters();
+  const filteredOut=(periodMode!=="all"||filtersOn)&&trades.length>0&&logList.length===0;
+  const LOG_HEADERS=[
+    {key:null,label:""},
+    {key:"date",label:"date"},
+    {key:"ticker",label:"ticker"},
+    {key:"setup",label:"setup"},
+    {key:null,label:"contracts"},
+    {key:null,label:"entry"},
+    {key:null,label:"stop"},
+    {key:null,label:"target"},
+    {key:null,label:"exit"},
+    {key:"result",label:"result"},
+    {key:"wl",label:"w/l"},
+    {key:"rules",label:"rules"},
+    {key:"process",label:"process"},
+    {key:null,label:""},
+    {key:null,label:""},
+  ];
+  const theadHtml=LOG_HEADERS.map(h=>{
+    if(!h.key)return`<th>${h.label}</th>`;
+    const active=logSort.col===h.key;
+    const arrow=active?`<span class="sortarrow">${logSort.dir==="asc"?"▲":"▼"}</span>`:"";
+    return`<th class="sortable${active?" sorted":""}" onclick="setLogSort('${h.key}')" title="sort by ${h.label}">${h.label}${arrow}</th>`;
+  }).join("");
   return`<div>
 <div class="lbar">
-  <span class="lcount">${en.length} trade${en.length!==1?"s":""} shown${periodMode!=="all"?` (of ${trades.length} total)`:""}</span>
+  <span class="lcount">${logList.length} trade${logList.length!==1?"s":""} shown${(periodMode!=="all"||filtersOn)?` (of ${trades.length} total)`:""}</span>
   <button class="btn" onclick="tog()">${showForm?"cancel":"+ add trade"}</button>
 </div>
+
+${trades.length>0?`<div class="logfilterbar">
+  <select onchange="setLogFilter('ticker',this.value)" title="filter by ticker">
+    <option value=""${logFilters.ticker===""?" selected":""}>All tickers</option>
+    ${uniqueTickersUsed().map(tk=>`<option value="${tk}"${logFilters.ticker===tk?" selected":""}>${tk}</option>`).join("")}
+  </select>
+  <select onchange="setLogFilter('setup',this.value)" title="filter by setup">
+    <option value=""${logFilters.setup===""?" selected":""}>All setups</option>
+    ${SETUPS.map(s=>`<option value="${s}"${logFilters.setup===s?" selected":""}>${s}</option>`).join("")}
+  </select>
+  <select onchange="setLogFilter('wl',this.value)" title="filter by win/loss">
+    <option value=""${logFilters.wl===""?" selected":""}>All W/L</option>
+    <option value="Win"${logFilters.wl==="Win"?" selected":""}>Win</option>
+    <option value="Loss"${logFilters.wl==="Loss"?" selected":""}>Loss</option>
+    <option value="BE"${logFilters.wl==="BE"?" selected":""}>Breakeven</option>
+  </select>
+  <select onchange="setLogFilter('process',this.value)" title="filter by process grade">
+    <option value=""${logFilters.process===""?" selected":""}>All process</option>
+    <option value="good"${logFilters.process==="good"?" selected":""}>Good</option>
+    <option value="bad"${logFilters.process==="bad"?" selected":""}>Bad</option>
+  </select>
+  <select onchange="setLogFilter('lossCat',this.value)" title="filter by loss category">
+    <option value=""${logFilters.lossCat===""?" selected":""}>All loss types</option>
+    ${LOSSCATS.map(c=>`<option value="${c.id}"${logFilters.lossCat===c.id?" selected":""}>${c.label}</option>`).join("")}
+  </select>
+  ${filtersOn?`<button class="btn" onclick="clearLogFilters()">clear filters</button>`:""}
+</div>`:""}
 
 ${showForm?`
 <div class="fcard">
@@ -1701,11 +1870,11 @@ ${showForm?`
 ${trades.length===0
   ?`<div class="empty"><div style="font-size:28px;margin-bottom:8px">📋</div><p>no trades logged yet — add your first trade above</p></div>`
   :filteredOut
-  ?`<div class="empty"><div style="font-size:28px;margin-bottom:8px">🗓️</div><p>no trades in this period — try a different week/month or switch back to "All"</p></div>`
+  ?`<div class="empty"><div style="font-size:28px;margin-bottom:8px">🗓️</div><p>no trades match${periodMode!=="all"?" this period /":""} these filters — try clearing filters or switching period</p></div>`
   :`<div class="twrap"><table>
-<thead><tr>${["","date","ticker","setup","contracts","entry","stop","target","exit","result","w/l","rules","process","",""].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+<thead><tr>${theadHtml}</tr></thead>
 <tbody>
-${en.map(t=>{
+${logList.map(t=>{
   const res=parseFloat(t.result);
   const rc=t.wl==="Win"?"var(--g)":t.wl==="Loss"?"var(--r)":"var(--t)";
   const col=sc(t.rs),bg=sbg(t.rs),bd=sbd(t.rs);
@@ -1722,7 +1891,7 @@ ${en.map(t=>{
 <td>${t.exit?`$${f2(t.exit)}`:"—"}</td>
 <td style="font-weight:700;color:${rc}">${!isNaN(res)?cuNoSign(res):"—"}</td>
 <td>${t.wl?`<span class="pill p${t.wl.toLowerCase()}">${t.wl}</span>`:"—"}</td>
-<td><span class="spill" style="background:${bg};color:${col};border:.5px solid ${bd}" title="rules followed">${sl}</span>${t.comments&&t.comments.trim()?" 📝":""}${t.screenshots&&t.screenshots.length>0?` 📷${t.screenshots.length}`:""}</td>
+<td><div class="rulesflex"><span class="spill" style="background:${bg};color:${col};border:.5px solid ${bd}" title="rules followed">${sl}</span>${t.comments&&t.comments.trim()?`<span title="has comment">📝</span>`:""}${t.screenshots&&t.screenshots.length>0?`<span title="has screenshots">📷${t.screenshots.length}</span>`:""}</div></td>
 <td>${t.isGood!==null?`<span class="pill ${t.isGood?"pgood":"pbad"}">${t.isGood?"Good":"Bad"}</span>`:"—"}</td>
 <td><button class="delbtn" onclick="event.stopPropagation();editTrade(${t.id})" title="edit trade">✎</button></td>
 <td><button class="delbtn" onclick="event.stopPropagation();del(${t.id})" title="delete trade">×</button></td>
@@ -1743,9 +1912,11 @@ function statRowH(s,title){
     ["Trading Days",`${s.tradingDays}D ${SEP} <span style="color:var(--g)">${s.greenDays}G</span> ${SEP} <span style="color:var(--r)">${s.redDays}R</span>`,null],
     ["Trades",`${s.n} ${SEP} <span style="color:var(--g)">${s.wc}W</span> ${SEP} <span style="color:var(--r)">${s.lc}L</span>`,null],
   ];
+  const bestCol=s.bestDay?(s.bestDay.net<0?"var(--r)":"var(--g)"):"var(--t3)";
+  const worstCol=s.worstDay?(s.worstDay.net<0?"var(--r)":"var(--a)"):"var(--t3)";
   const row2=[
     ["Win Rate",pc(s.wr),wrColor],
-    ["Best / Worst Day",`<span style="color:var(--g)">${s.bestDay?cu(s.bestDay.net):"—"}</span> ${SEP} <span style="color:var(--r)">${s.worstDay?cu(s.worstDay.net):"—"}</span>`,null],
+    ["Best / Worst Day",`<span style="color:${bestCol}">${s.bestDay?cu(s.bestDay.net):"—"}</span> ${SEP} <span style="color:${worstCol}">${s.worstDay?cu(s.worstDay.net):"—"}</span>`,null],
   ];
   const row3=[
     ["Avg Win / Loss",`<span style="color:var(--g)">${s.aw!==null?cu(s.aw):"—"}</span> ${SEP} <span style="color:var(--r)">${s.al!==null?cu(-s.al):"—"}</span>`,null],
@@ -1765,9 +1936,11 @@ function dashH(s,en,ec,bc,em){
   return`<div>
 <div class="dashSplit">
   <div id="dash-stat-col">${statRowH(s,periodTitle)}</div>
-  <div class="bpanel eq-panel-auto" id="dash-eq-panel" style="margin-bottom:0">
-    <div class="plbl">equity curve</div>
-    <div class="eq-outer" id="dash-eq-outer"></div>
+  <div class="eq-col-auto" id="dash-eq-col">
+    <div class="plbl" style="margin-bottom:8px">equity curve</div>
+    <div class="bpanel eq-panel-auto" id="dash-eq-panel" style="margin-bottom:0;flex:1">
+      <div class="eq-outer" id="dash-eq-outer"></div>
+    </div>
   </div>
 </div>
 
@@ -1812,18 +1985,20 @@ ${calendarH(en)}
     </div>
     ${s.bw>0?`<div class="qwarn">⚠ ${s.bw} trade${s.bw!==1?"s":""} won despite poor process — the most dangerous quadrant, since it reinforces bad habits.</div>`:""}
   </div>
-  <div class="bpanel" style="margin-bottom:0">
+  <div class="bpanel" style="margin-bottom:0;display:flex;flex-direction:column">
     <div class="plbl" style="margin-bottom:10px">loss categories</div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
     ${s.lcStats.every(c=>c.count===0)
       ?`<div class="dqok">no losses categorized yet</div>`
       :s.lcStats.map(c=>{
-        const col=c.id==="good"?"var(--g)":c.id==="exec"?"var(--a)":c.id==="dec"?"var(--a)":"var(--r)";
+        const col=c.id==="good"?"var(--g)":c.id==="exec"?"var(--a)":c.id==="dec"?"var(--p)":"var(--r)";
         const dolCol=c.dollars>0?"var(--r)":"var(--t3)";
         return`<div class="losscat-item" title="${c.hint}">
           <div class="lcrow"><div class="lcname">${c.label}</div><div class="lcmeta" style="color:${dolCol}">${c.count} · ${c.pct!==null?pc(c.pct):"—"} · ${cuNoSign(c.dollars)}</div></div>
           <div class="lcbarwrap"><div class="lcbar" style="width:${c.pct!==null?(c.pct*100).toFixed(0)+"%":"0%"};background:${col}"></div></div>
         </div>`;
       }).join("")}
+    </div>
   </div>
 </div>
 
@@ -1857,7 +2032,7 @@ ${en.length>0?`
 <p class="seclab">setup breakdown</p>
 <div class="setuprow">
 ${SETUPS.map(setup=>{
-  const ts=en.filter(t=>t.setup===setup),ws=ts.filter(t=>t.wl==="Win"),wr=ts.length>0?ws.length/ts.length:null;
+  const ts=en.filter(t=>t.setup===setup),ws=ts.filter(t=>t.wl==="Win"),ls=ts.filter(t=>t.wl==="Loss"),wr=(ws.length+ls.length)>0?ws.length/(ws.length+ls.length):null;
   const c=wr===null?"var(--t3)":wr>=.5?"var(--g)":"var(--r)";
   return`<div class="setupcard"><div class="setupname">${setup}</div><div class="setuptrades">${ts.length} trade${ts.length!==1?"s":""}</div><div class="setupwr" style="color:${c}">${wr!==null?pc(wr):"—"}</div></div>`;
 }).join("")}
