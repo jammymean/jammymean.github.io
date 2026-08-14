@@ -84,6 +84,12 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .mdrow{display:flex;align-items:center;gap:16px;margin:2px 0 12px;flex-wrap:wrap}
 .mdlabel{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:var(--fbase);color:var(--t2)}
 .mdlabel input{cursor:pointer}
+.fillrow{background:var(--surface);border:.5px solid var(--bd);border-radius:var(--rad);padding:10px 10px 0;margin-bottom:8px}
+.fillrowhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.fillnum{font-size:var(--fxs);font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em}
+.fillrm{background:none;border:none;color:var(--t3);font-size:16px;line-height:1;cursor:pointer;padding:0 4px}
+.fillrm:hover{color:var(--r)}
+.fillsummary{font-size:var(--fxs);color:var(--t2);margin-top:4px}
 /* Rules checklist */
 .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 @media(max-width:540px){.rgrid{grid-template-columns:1fr}}
@@ -331,11 +337,12 @@ function sortedTickers(){
 }
 function tickerInfo(symbol){return TICKERS.find(t=>t.symbol===symbol)||null;}
 
-let trades=[],reflections=[],dq=DQ_DEFAULT.map(d=>({...d})),tab="log",showForm=false,editingDq=false,editingId=null,showRefForm=false,expandedId=null;
-let periodMode="all",periodAnchor=new Date(),customFrom="",customTo="";
+let trades=[],reflections=[],dq=DQ_DEFAULT.map(d=>({...d})),tab="dashboard",showForm=false,editingDq=false,editingId=null,showRefForm=false,expandedId=null;
+let periodMode="week",periodAnchor=new Date(),customFrom="",customTo="";
 let logSort={col:"date",dir:"desc"};
 let logFilters={ticker:"",setup:"",wl:"",process:"",lossCat:""};
 let resultManual=false;
+let fillSeq=1;
 
 // form state — kept separate so inputs are never re-rendered while typing
 let form=blank();
@@ -345,7 +352,10 @@ function blank(){
   const dqa={};dq.forEach(d=>dqa[d.id]=false);
   const first=sortedTickers()[0];
   resultManual=false;
-  return{date:td(),entryTime:"",exitTime:"",multiDay:false,exitDate:"",ticker:first?first.symbol:"",setup:"Bounce",direction:"long",contracts:"1",entry:"",stop:"",target:"",exit:"",result:"",lossCat:"",comments:"",screenshots:[],ra,dqa};
+  fillSeq=2;
+  return{date:td(),entryTime:"10:00",exitTime:"10:00",multiDay:false,exitDate:"",ticker:first?first.symbol:"",setup:"Bounce",direction:"long",contracts:"1",entry:"",stop:"",target:"",exit:"",result:"",lossCat:"",comments:"",screenshots:[],
+    fills:[{id:1,type:"add",price:"",contracts:"1",stop:"",target:""},{id:2,type:"exit",price:"",contracts:"1",stop:"",target:""}],
+    ra,dqa};
 }
 function td(){return new Date().toISOString().split("T")[0]}
 
@@ -553,6 +563,10 @@ function calcStats(list){
   const cleanTrades=withDq.filter(t=>t.dqViolCount===0);
   const violPnl=violTrades.reduce((a,t)=>a+parseFloat(t.result),0);
   const cleanPnl=cleanTrades.reduce((a,t)=>a+parseFloat(t.result),0);
+  const violW=violTrades.filter(t=>t.wl==="Win"),violL=violTrades.filter(t=>t.wl==="Loss");
+  const cleanW=cleanTrades.filter(t=>t.wl==="Win"),cleanL=cleanTrades.filter(t=>t.wl==="Loss");
+  const violGrossWin=violW.reduce((a,t)=>a+parseFloat(t.result),0),violGrossLoss=violL.reduce((a,t)=>a+parseFloat(t.result),0);
+  const cleanGrossWin=cleanW.reduce((a,t)=>a+parseFloat(t.result),0),cleanGrossLoss=cleanL.reduce((a,t)=>a+parseFloat(t.result),0);
   const dqStats=dq.map(d=>{
     const a=list.filter(t=>t.dqa&&t.dqa[d.id]!==undefined);
     const v=a.filter(t=>t.dqa[d.id]===true);
@@ -568,7 +582,9 @@ function calcStats(list){
     if(bestDay===null||v.net>bestDay.net)bestDay={date,net:v.net};
     if(worstDay===null||v.net<worstDay.net)worstDay={date,net:v.net};
   });
-  return{n,wc,lc,wr,lr,aw,al,ar,net,edge,ep,adur,arReal,ruleStats,gw,gl,bw,bl,lcStats,violTrades:violTrades.length,cleanTrades:cleanTrades.length,violPnl,cleanPnl,dqStats,tradingDays,greenDays,redDays,bestDay,worstDay};
+  return{n,wc,lc,wr,lr,aw,al,ar,net,edge,ep,adur,arReal,ruleStats,gw,gl,bw,bl,lcStats,violTrades:violTrades.length,cleanTrades:cleanTrades.length,violPnl,cleanPnl,
+    violW:violW.length,violL:violL.length,violGrossWin,violGrossLoss,cleanW:cleanW.length,cleanL:cleanL.length,cleanGrossWin,cleanGrossLoss,
+    dqStats,tradingDays,greenDays,redDays,bestDay,worstDay};
 }
 function aggregateByDay(list){
   const map={};
@@ -869,18 +885,20 @@ function addTrade(){
   const tkEl=document.getElementById("fi-ticker");if(tkEl)form.ticker=tkEl.value;
   const setupEl=document.getElementById("fi-setup");if(setupEl)form.setup=setupEl.value;
   const dirEl=document.getElementById("fi-direction");if(dirEl)form.direction=dirEl.value;
-  const conEl=document.getElementById("fi-contracts");if(conEl)form.contracts=conEl.value;
   const mdEl=document.getElementById("fi-multiday");form.multiDay=mdEl?mdEl.checked:false;
   const xdEl=document.getElementById("fi-exitdate");if(xdEl)form.exitDate=form.multiDay?xdEl.value:"";
-  const enEl=document.getElementById("fi-entry");if(enEl)form.entry=enEl.value;
-  const stEl=document.getElementById("fi-stop");if(stEl)form.stop=stEl.value;
-  const tgEl=document.getElementById("fi-target");if(tgEl)form.target=tgEl.value;
-  const exEl=document.getElementById("fi-exit");if(exEl)form.exit=exEl.value;
+  syncFillsFromDOM();
+  const s=getFillsSummary();
+  form.contracts=s.totalContracts?String(s.totalContracts):"";
+  form.entry=!isNaN(s.weightedEntry)?String(s.weightedEntry):"";
+  form.stop=s.stop||"";
+  form.target=s.target||"";
+  form.exit=s.closedContracts>0&&!isNaN(s.weightedExit)?String(s.weightedExit):"";
   const resEl=document.getElementById("fi-result");if(resEl)form.result=resEl.value;
   const lcEl=document.getElementById("fi-losscat");if(lcEl)form.lossCat=lcEl.value;
   const cmEl=document.getElementById("fi-comments");if(cmEl)form.comments=cmEl.value;
   if(!form.ticker||!form.entry){
-    alert("Please enter at least a ticker and entry price before logging this trade.");
+    alert("Please enter at least a ticker and one entry/add fill with a price before logging this trade.");
     return;
   }
   const resNum=parseFloat(form.result);
@@ -888,11 +906,12 @@ function addTrade(){
     alert("This trade is a loss — please select a loss category (Good / Execution / Decision / Emotional) before logging it.");
     return;
   }
+  const fillsClone=form.fills.map(f=>({...f}));
   if(editingId!==null){
-    trades=trades.map(t=>t.id===editingId?{...form,ra:{...form.ra},dqa:{...form.dqa},screenshots:[...form.screenshots],id:editingId}:t);
+    trades=trades.map(t=>t.id===editingId?{...form,ra:{...form.ra},dqa:{...form.dqa},screenshots:[...form.screenshots],fills:fillsClone,id:editingId}:t);
     editingId=null;
   }else{
-    trades.unshift({...form,ra:{...form.ra},dqa:{...form.dqa},screenshots:[...form.screenshots],id:Date.now()});
+    trades.unshift({...form,ra:{...form.ra},dqa:{...form.dqa},screenshots:[...form.screenshots],fills:fillsClone,id:Date.now()});
   }
   form=blank();showForm=false;save();render();
 }
@@ -907,7 +926,16 @@ function tog(){
 }
 function editTrade(id){
   const t=trades.find(x=>x.id===id);if(!t)return;
-  form={...t,ra:{...t.ra},dqa:{...t.dqa},screenshots:[...(t.screenshots||[])],direction:t.direction||"long",multiDay:!!t.multiDay,exitDate:t.exitDate||"",entryTime:t.entryTime||"",exitTime:t.exitTime||"",exit:t.exit||""};
+  let fills;
+  if(t.fills&&t.fills.length){
+    fills=t.fills.map(f=>({id:f.id,type:f.type||"add",price:f.price!==undefined?f.price:"",contracts:f.contracts!==undefined?f.contracts:"1",stop:f.stop||"",target:f.target||""}));
+  }else{
+    // legacy trade with a single entry/exit — migrate into fill rows on the fly
+    fills=[{id:1,type:"add",price:t.entry||"",contracts:t.contracts||"1",stop:t.stop||"",target:t.target||""}];
+    if(t.exit){fills.push({id:2,type:"exit",price:t.exit,contracts:t.contracts||"1",stop:"",target:""});}
+  }
+  fillSeq=fills.reduce((m,f)=>Math.max(m,f.id),0);
+  form={...t,ra:{...t.ra},dqa:{...t.dqa},screenshots:[...(t.screenshots||[])],direction:t.direction||"long",multiDay:!!t.multiDay,exitDate:t.exitDate||"",entryTime:t.entryTime||"10:00",exitTime:t.exitTime||"10:00",exit:t.exit||"",fills};
   resultManual=false;
   editingId=id;showForm=true;
   window.scrollTo({top:0,behavior:"smooth"});
@@ -1036,22 +1064,114 @@ function applySetupDefault(){
   recomputeAutoResult();
 }
 function markResultManual(){resultManual=true;}
-function recomputeAutoResult(){
-  if(resultManual)return;
-  const tkEl=document.getElementById("fi-ticker"),enEl=document.getElementById("fi-entry"),
-        exEl=document.getElementById("fi-exit"),coEl=document.getElementById("fi-contracts"),
-        dirEl=document.getElementById("fi-direction"),resEl=document.getElementById("fi-result");
-  if(!resEl)return;
+
+// ── Fills (scale-in / scale-out) ──────────────────────────────────────────────
+// A trade can have multiple "fills": each is an Add (opened/scaled in) or an
+// Exit (closed/reduced). Contracts, weighted-avg entry/exit price, and the
+// cumulative $ result all roll up automatically from the fill list.
+function nextFillId(){fillSeq+=1;return fillSeq;}
+function fillsSectionHtml(){
+  const rows=form.fills.map((f,i)=>{
+    const isAdd=f.type!=="exit";
+    return`<div class="fillrow" data-fill="${f.id}">
+      <div class="fillrowhead"><span class="fillnum">${i===0?"entry":"fill "+(i+1)}</span>${form.fills.length>1?`<button type="button" class="fillrm" onclick="removeFillRow(${f.id})" title="remove fill">×</button>`:""}</div>
+      <div class="fgrid" style="margin-bottom:8px">
+        <div class="field"><label>type</label>
+          <select id="fi-fill-type-${f.id}" onchange="renderFillsSection();refreshRiskPreview();recomputeAutoResult()">
+            <option value="add"${isAdd?" selected":""}>Add (opened / scaled in)</option>
+            <option value="exit"${!isAdd?" selected":""}>Exit (closed / reduced)</option>
+          </select>
+        </div>
+        <div class="field"><label>price</label><input id="fi-fill-price-${f.id}" type="number" placeholder="0.00" step="0.01" value="${f.price}" oninput="refreshRiskPreview();recomputeAutoResult()"/></div>
+        <div class="field"><label>contracts</label>
+          <select id="fi-fill-contracts-${f.id}" onchange="refreshRiskPreview();recomputeAutoResult()">
+            ${Array.from({length:10},(_,n)=>n+1).map(n=>`<option value="${n}"${String(f.contracts)===String(n)?" selected":""}>${n}</option>`).join("")}
+          </select>
+        </div>
+        ${isAdd?`<div class="field"><label>stop loss</label><input id="fi-fill-stop-${f.id}" type="number" placeholder="0.00" step="0.01" value="${f.stop||""}" oninput="refreshRiskPreview()"/></div>
+        <div class="field"><label>take profit</label><input id="fi-fill-target-${f.id}" type="number" placeholder="0.00" step="0.01" value="${f.target||""}" oninput="refreshRiskPreview()"/></div>`:""}
+      </div>
+    </div>`;
+  }).join("");
+  return`${rows}<button type="button" class="btn" onclick="addFillRow()">+ add fill (scaled in/out)</button><div id="fills-summary" class="fillsummary"></div>`;
+}
+function renderFillsSection(){
+  const c=document.getElementById("fills-section");
+  if(!c)return;
+  syncFillsFromDOM();
+  c.innerHTML=fillsSectionHtml();
+  refreshFillsSummary();
+}
+function syncFillsFromDOM(){
+  form.fills=form.fills.map(f=>{
+    const typeEl=document.getElementById(`fi-fill-type-${f.id}`);
+    const priceEl=document.getElementById(`fi-fill-price-${f.id}`);
+    const conEl=document.getElementById(`fi-fill-contracts-${f.id}`);
+    const stopEl=document.getElementById(`fi-fill-stop-${f.id}`);
+    const targetEl=document.getElementById(`fi-fill-target-${f.id}`);
+    return{
+      id:f.id,
+      type:typeEl?typeEl.value:f.type,
+      price:priceEl?priceEl.value:f.price,
+      contracts:conEl?conEl.value:f.contracts,
+      stop:stopEl?stopEl.value:(f.stop||""),
+      target:targetEl?targetEl.value:(f.target||"")
+    };
+  });
+}
+function addFillRow(){
+  syncFillsFromDOM();
+  const last=form.fills[form.fills.length-1];
+  // auto-copy the previous fill's values into the new row — everything stays editable
+  form.fills.push({id:nextFillId(),type:last?last.type:"add",price:last?last.price:"",contracts:last?last.contracts:"1",stop:last?last.stop:"",target:last?last.target:""});
+  renderFillsSection();
+  refreshRiskPreview();
+  recomputeAutoResult();
+}
+function removeFillRow(id){
+  syncFillsFromDOM();
+  if(form.fills.length<=1)return;
+  form.fills=form.fills.filter(f=>f.id!==id);
+  renderFillsSection();
+  refreshRiskPreview();
+  recomputeAutoResult();
+}
+function getFillsSummary(){
+  syncFillsFromDOM();
+  const tkEl=document.getElementById("fi-ticker"),dirEl=document.getElementById("fi-direction");
   const ti=tkEl?tickerInfo(tkEl.value):null;
-  const entry=enEl?parseFloat(enEl.value):NaN;
-  const exit=exEl?parseFloat(exEl.value):NaN;
-  const contracts=coEl?parseFloat(coEl.value)||1:1;
-  const dir=dirEl?dirEl.value:"long";
-  if(!ti||isNaN(entry)||isNaN(exit))return;
-  const mult=ti.perPoint*contracts;
-  const dirPts=dir==="short"?(entry-exit):(exit-entry);
-  const val=dirPts*mult;
-  resEl.value=val.toFixed(2);
+  const direction=dirEl?dirEl.value:"long";
+  const adds=form.fills.filter(f=>f.type!=="exit").map(f=>({price:parseFloat(f.price),contracts:parseFloat(f.contracts)||0})).filter(f=>!isNaN(f.price)&&f.contracts>0);
+  const exits=form.fills.filter(f=>f.type==="exit").map(f=>({price:parseFloat(f.price),contracts:parseFloat(f.contracts)||0})).filter(f=>!isNaN(f.price)&&f.contracts>0);
+  const totalContracts=adds.reduce((s,f)=>s+f.contracts,0);
+  const closedContracts=exits.reduce((s,f)=>s+f.contracts,0);
+  const weightedEntry=totalContracts>0?adds.reduce((s,f)=>s+f.price*f.contracts,0)/totalContracts:NaN;
+  const weightedExit=closedContracts>0?exits.reduce((s,f)=>s+f.price*f.contracts,0)/closedContracts:NaN;
+  const lastAdd=[...form.fills].reverse().find(f=>f.type!=="exit");
+  const stop=lastAdd?lastAdd.stop||"":"";
+  const target=lastAdd?lastAdd.target||"":"";
+  let result=null;
+  if(ti&&!isNaN(weightedEntry)&&!isNaN(weightedExit)&&closedContracts>0){
+    const dirPts=direction==="short"?(weightedEntry-weightedExit):(weightedExit-weightedEntry);
+    result=dirPts*ti.perPoint*closedContracts;
+  }
+  return{ti,direction,totalContracts,closedContracts,weightedEntry,weightedExit,stop,target,result};
+}
+function refreshFillsSummary(){
+  const c=document.getElementById("fills-summary");
+  if(!c)return;
+  const s=getFillsSummary();
+  if(!s.totalContracts){c.innerHTML="";return;}
+  c.innerHTML=`position size <strong>${s.totalContracts}</strong>${!isNaN(s.weightedEntry)?` · avg entry <strong>$${f2(s.weightedEntry)}</strong>`:""}${s.closedContracts>0?` · closed ${s.closedContracts}/${s.totalContracts} @ avg $${f2(s.weightedExit)}`:""}`;
+}
+function recomputeAutoResult(){
+  refreshFillsSummary();
+  if(resultManual)return;
+  const resEl=document.getElementById("fi-result");
+  if(!resEl)return;
+  const s=getFillsSummary();
+  if(s.result===null)return;
+  resEl.value=s.result.toFixed(2);
 }
 
 // ── Lightbox (image viewer) — also replaces the old trade-review popup ───────
@@ -1133,8 +1253,8 @@ function expSummaryHTML(){
     return`<div class="rsrow"><span class="rsname">${d.text}</span><span class="rspct" style="color:${col}">${d.violCount}/${d.total}</span></div>`;
   }).join("");
   const dqRows=`<div class="dgrid" style="grid-template-columns:1fr 1fr;margin-bottom:16px">
-      <div style="padding:8px 0"><div class="slabel">clean (${s.cleanTrades})</div><div class="sval" style="color:${dqCleanCol}">${cu(s.cleanPnl)}</div></div>
-      <div style="padding:8px 0"><div class="slabel">violated (${s.violTrades})</div><div class="sval" style="color:${dqViolCol}">${cu(s.violPnl)}</div></div>
+      <div style="padding:14px 14px 4px"><div class="slabel">clean (${s.cleanTrades})</div><div class="sval" style="color:${dqCleanCol}">${cu(s.cleanPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px">${s.cleanW}W ${cu(s.cleanGrossWin)} · ${s.cleanL}L ${cu(s.cleanGrossLoss)}</div></div>
+      <div style="padding:14px 14px 4px"><div class="slabel">violated (${s.violTrades})</div><div class="sval" style="color:${dqViolCol}">${cu(s.violPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px">${s.violW}W ${cu(s.violGrossWin)} · ${s.violL}L ${cu(s.violGrossLoss)}</div></div>
     </div>
     ${s.violTrades>0?`<div class="qwarn" style="margin:0 0 16px">Removing violated trades would change P&L by ${cu(-s.violPnl)}.</div>`:`<div class="dqok" style="margin:0 0 16px">no disqualifier violations logged yet</div>`}
     ${dqRowsList?`<div>${dqRowsList}</div>`:""}`;
@@ -1429,34 +1549,29 @@ window.addEventListener("resize",function(){
 function refreshRiskPreview(){
   const container=document.getElementById("risk-preview");
   if(!container)return;
-  const tk=document.getElementById("fi-ticker"),en=document.getElementById("fi-entry"),
-        st=document.getElementById("fi-stop"),tg=document.getElementById("fi-target"),
-        ex=document.getElementById("fi-exit"),dir=document.getElementById("fi-direction"),
-        co=document.getElementById("fi-contracts");
-  const ti=tk?tickerInfo(tk.value):null;
-  const e=en?parseFloat(en.value):NaN,s=st?parseFloat(st.value):NaN,t=tg?parseFloat(tg.value):NaN;
-  const exVal=ex?parseFloat(ex.value):NaN;
-  const direction=dir?dir.value:"long";
-  const contracts=co?parseFloat(co.value)||1:1;
-  if(!ti||isNaN(e)||(isNaN(s)&&isNaN(t))){
+  const s=getFillsSummary();
+  const stopNum=parseFloat(s.stop),targetNum=parseFloat(s.target);
+  if(!s.ti||isNaN(s.weightedEntry)||(isNaN(stopNum)&&isNaN(targetNum))){
     container.innerHTML=`<div style="font-size:var(--fxs);color:var(--t3);margin-top:8px">enter entry + stop/target to preview leveraged $ risk</div>`;
     return;
   }
-  const mult=ti.perPoint*contracts;
-  const riskPts=!isNaN(s)?Math.abs(e-s):null;
-  const rewardPts=!isNaN(t)?Math.abs(t-e):null;
+  const contracts=s.totalContracts||1;
+  const mult=s.ti.perPoint*contracts;
+  const riskPts=!isNaN(stopNum)?Math.abs(s.weightedEntry-stopNum):null;
+  const rewardPts=!isNaN(targetNum)?Math.abs(targetNum-s.weightedEntry):null;
   const risk=riskPts!==null?riskPts*mult:null;
   const reward=rewardPts!==null?rewardPts*mult:null;
   const rr=risk&&reward&&risk!==0?reward/risk:null;
   let realizedLine="";
-  if(!isNaN(exVal)&&riskPts){
-    const dirPts=direction==="short"?(e-exVal):(exVal-e);
+  if(s.closedContracts>0&&!isNaN(s.weightedExit)&&riskPts){
+    const dirPts=s.direction==="short"?(s.weightedEntry-s.weightedExit):(s.weightedExit-s.weightedEntry);
     const realizedR=dirPts/riskPts;
-    const realizedDollar=dirPts*mult;
-    realizedLine=`<br/>exit → realized <strong style="color:${realizedDollar>=0?"var(--g)":"var(--r)"}">${cu(realizedDollar)}</strong> (${f2(realizedR)}:1 of planned risk)`;
+    const realizedDollar=dirPts*s.ti.perPoint*s.closedContracts;
+    realizedLine=`<br/>closed ${s.closedContracts}/${contracts} → realized <strong style="color:${realizedDollar>=0?"var(--g)":"var(--r)"}">${cu(realizedDollar)}</strong> (${f2(realizedR)}:1 of planned risk)`;
   }
   container.innerHTML=`<div class="eform" style="margin-top:8px">
-    ${ti.symbol} · $${f2(ti.perPoint)}/pt × ${contracts} contract${contracts===1?"":"s"} · tick $${f2(ti.tickDollar)}<br/>
+    ${s.ti.symbol} · $${f2(s.ti.perPoint)}/pt × ${contracts} contract${contracts===1?"":"s"} (position size) · tick $${f2(s.ti.tickDollar)}<br/>
+    avg entry <strong>$${f2(s.weightedEntry)}</strong><br/>
     ${risk!==null?`<span style="color:var(--r)">risk ${cu(-risk)}</span>`:""}${risk!==null&&reward!==null?" · ":""}${reward!==null?`<span style="color:var(--g)">reward ${cu(reward)}</span>`:""}${rr!==null?` · <strong>${f2(rr)}:1</strong>`:""}${realizedLine}
   </div>`;
 }
@@ -1635,7 +1750,7 @@ ${periodBarH(filtered.length,trades.length)}
 </div>
 ${tab==="log"?logH(en):tab==="dashboard"?dashH(s,en,ec,bc,em):reflectionH()}
 </div>`;
-  if(showForm){refreshRiskPreview();refreshRules();refreshDq();refreshScreenshots();}
+  if(showForm){renderFillsSection();refreshRiskPreview();refreshRules();refreshDq();refreshScreenshots();}
   if(tab==="dashboard"){
     dashboardEquityPoints=equityPoints(en);
     layoutDashboardChart();
@@ -1662,6 +1777,7 @@ function expandRowH(t){
       ${t.lossCat?`<span><strong>Loss type</strong> ${lcMap[t.lossCat]||""}</span>`:""}
     </div>
     ${t.comments&&t.comments.trim()?`<div class="expsub">comments</div><div class="expcomment">${esc(t.comments)}</div>`:""}
+    ${t.fills&&t.fills.length>1?`<div class="expsub">fills</div><div class="expcomment">${t.fills.map((f,i)=>`${i===0?"entry":"fill "+(i+1)}: ${f.type==="exit"?"exit":"add"} ${f.contracts||"—"} @ $${f2(parseFloat(f.price))}${f.type!=="exit"&&(f.stop||f.target)?` (stop ${f.stop?"$"+f2(parseFloat(f.stop)):"—"}, target ${f.target?"$"+f2(parseFloat(f.target)):"—"})`:""}`).join("<br/>")}</div>`:""}
     <div class="expcols" style="margin-top:18px">
       <div>
         <div class="expsub">rules checklist</div>
@@ -1825,11 +1941,6 @@ ${showForm?`
         <option value="short"${form.direction==="short"?" selected":""}>Short</option>
       </select>
     </div>
-    <div class="field"><label>contracts</label>
-      <select id="fi-contracts" onchange="refreshRiskPreview();recomputeAutoResult()">
-        ${Array.from({length:10},(_,i)=>i+1).map(n=>`<option value="${n}"${String(form.contracts)===String(n)?" selected":""}>${n}</option>`).join("")}
-      </select>
-    </div>
   </div>
   <div class="mdrow">
     <label class="mdlabel"><input type="checkbox" id="fi-multiday" ${form.multiDay?"checked":""} onchange="toggleMultiDay()"/> multi-day trade</label>
@@ -1837,11 +1948,9 @@ ${showForm?`
       <label>exit date</label><input id="fi-exitdate" type="date" value="${form.exitDate||form.date}"/>
     </div>
   </div>
-  <div class="fgrid">
-    <div class="field"><label>entry price</label><input id="fi-entry" type="number" placeholder="0.00" step="0.01" value="${form.entry}" oninput="refreshRiskPreview();recomputeAutoResult()"/></div>
-    <div class="field"><label>stop loss</label><input id="fi-stop" type="number" placeholder="0.00" step="0.01" value="${form.stop}" oninput="refreshRiskPreview()"/></div>
-    <div class="field"><label>take profit</label><input id="fi-target" type="number" placeholder="0.00" step="0.01" value="${form.target}" oninput="refreshRiskPreview()"/></div>
-    <div class="field"><label>exit price</label><input id="fi-exit" type="number" placeholder="0.00" step="0.01" value="${form.exit||""}" oninput="refreshRiskPreview();recomputeAutoResult()"/></div>
+  <div class="fsec" style="margin-top:1.1rem">fills <span style="font-weight:400;color:var(--t3);text-transform:none;letter-spacing:normal"> — log each add/entry or exit/reduce; contracts, avg price, and $ result roll up automatically. New fills copy the previous one's values — edit whatever changed.</span></div>
+  <div id="fills-section"></div>
+  <div class="fgrid" style="margin-top:10px">
     <div class="field">
       <label>result ($)</label>
       <input id="fi-result" type="text" inputmode="decimal" placeholder="e.g. -250 or 400" value="${form.result}"
@@ -2007,8 +2116,8 @@ ${calendarH(en)}
   <div class="bpanel" style="margin-bottom:0">
     <div class="plbl" style="margin-bottom:14px">disqualifiers <span style="text-transform:none;color:var(--t3);letter-spacing:0"> — what would your P&L look like without these?</span></div>
     <div class="dgrid" style="grid-template-columns:1fr 1fr;margin-bottom:16px">
-      <div style="padding:8px 0"><div class="slabel">clean (${s.cleanTrades})</div><div class="sval" style="color:${s.cleanPnl>=0?"var(--g)":"var(--r)"}">${cu(s.cleanPnl)}</div></div>
-      <div style="padding:8px 0"><div class="slabel">violated (${s.violTrades})</div><div class="sval" style="color:${s.violPnl>=0?"var(--g)":"var(--r)"}">${cu(s.violPnl)}</div></div>
+      <div style="padding:14px 14px 4px"><div class="slabel">clean (${s.cleanTrades})</div><div class="sval" style="color:${s.cleanPnl>=0?"var(--g)":"var(--r)"}">${cu(s.cleanPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px">${s.cleanW}W ${cu(s.cleanGrossWin)} · ${s.cleanL}L ${cu(s.cleanGrossLoss)}</div></div>
+      <div style="padding:14px 14px 4px"><div class="slabel">violated (${s.violTrades})</div><div class="sval" style="color:${s.violPnl>=0?"var(--g)":"var(--r)"}">${cu(s.violPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px">${s.violW}W ${cu(s.violGrossWin)} · ${s.violL}L ${cu(s.violGrossLoss)}</div></div>
     </div>
     ${s.violTrades>0?`<div class="qwarn" style="margin-bottom:16px">Removing violated trades would change P&L by ${cu(-s.violPnl)}.</div>`:`<div class="dqok" style="margin-bottom:16px">no disqualifier violations logged yet</div>`}
     ${s.dqStats.some(d=>d.total>0)?`<div>
