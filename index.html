@@ -451,12 +451,17 @@ function getFilteredTrades(){
   if(!r)return trades.slice();
   return trades.filter(t=>{const d=parseYMD(t.date);return d>=r.start&&d<=r.end;});
 }
-function periodFileTag(){
+function pad2(n){return String(n).padStart(2,"0");}
+function ddmmyy(d){return `${pad2(d.getDate())}${pad2(d.getMonth()+1)}${String(d.getFullYear()).slice(-2)}`;}
+function mmyy(d){return `${pad2(d.getMonth()+1)}${String(d.getFullYear()).slice(-2)}`;}
+function exportFileName(ext){
   const r=periodRange();
-  if(!r)return `all_${td()}`;
-  if(periodMode==="week")return `week_${ymd(r.start)}`;
-  if(periodMode==="month")return `${MON[r.start.getMonth()].toLowerCase()}_${r.start.getFullYear()}`;
-  return `${customFrom}_to_${customTo}`;
+  let tag;
+  if(periodMode==="week")tag=`W${ddmmyy(r.start)}`;
+  else if(periodMode==="month")tag=`M${mmyy(r.start)}`;
+  else if(periodMode==="custom"&&r)tag=`C${ddmmyy(r.start)}-${ddmmyy(r.end)}`;
+  else tag=`A${ddmmyy(new Date())}`;
+  return `J.'s TS ${tag}.${ext}`;
 }
 function setPeriod(mode){
   periodMode=mode;
@@ -1207,7 +1212,7 @@ function confirmExportSummary(){
 }
 
 // ── Export / Import ───────────────────────────────────────────────────────────
-function expData(){const b=new Blob([JSON.stringify({trades,reflections,dq},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`tj_backup_${td()}.json`;a.click();}
+function expData(){const b=new Blob([JSON.stringify({trades,reflections,dq},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`J.'s TS A${ddmmyy(new Date())}.json`;a.click();}
 function impData(){const i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.trades)trades=d.trades.map(migrateTrade);if(Array.isArray(d.reflections))reflections=d.reflections;else if(d.ref&&(d.ref.best||d.ref.broke||d.ref.improve))reflections=[{id:Date.now(),date:td(),best:d.ref.best||"",broke:d.ref.broke||"",improve:d.ref.improve||""}];if(d.dq&&d.dq.length)dq=d.dq;save();render();}catch(e){alert("Invalid file.")}};r.readAsText(f);};i.click();}
 
 function expCSV(){
@@ -1231,7 +1236,7 @@ function expCSV(){
       rc,dc].join(",");
   });
   const b=new Blob([[hdr,...rows].join("\n")],{type:"text/csv"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`trades_${periodFileTag()}.csv`;a.click();
+  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=exportFileName("csv");a.click();
 }
 
 function expSummaryHTML(includeStats){
@@ -1792,7 +1797,7 @@ window.addEventListener("resize",function(){
 </body></html>`;
 
   const b=new Blob([html],{type:"text/html"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`journal_summary_${periodFileTag()}.html`;a.click();
+  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=exportFileName("html");a.click();
 }
 
 // ── Partial refresh — leveraged risk preview ──────────────────────────────────
