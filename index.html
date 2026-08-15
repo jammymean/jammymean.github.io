@@ -398,15 +398,26 @@ function migrateTrade(t){
     exit: t.exit!==undefined?t.exit:""
   };
 }
+function migrateReflection(r){
+  if(r.sections&&r.periodType&&r.periodDate&&r.entryDate)return r;
+  const entryDate=r.date||td();
+  const periodDate=ymd(startOfWeek(parseYMD(entryDate)));
+  const sections=[
+    {q:"What setups worked best?",a:r.best||""},
+    {q:"Where did I break rules?",a:r.broke||""},
+    {q:"What will I improve next?",a:r.improve||""}
+  ];
+  return{id:r.id||Date.now(),periodType:"week",periodDate,entryDate,sections};
+}
 function load(){
   try{
     const d=JSON.parse(localStorage.getItem(KEY)||"{}");
     if(d.trades)trades=d.trades.map(migrateTrade);
     if(d.dq&&d.dq.length)dq=d.dq;
     if(Array.isArray(d.reflections)){
-      reflections=d.reflections;
+      reflections=d.reflections.map(migrateReflection);
     }else if(d.ref&&(d.ref.best||d.ref.broke||d.ref.improve)){
-      reflections=[{id:Date.now(),date:td(),best:d.ref.best||"",broke:d.ref.broke||"",improve:d.ref.improve||""}];
+      reflections=[migrateReflection({id:Date.now(),date:td(),best:d.ref.best||"",broke:d.ref.broke||"",improve:d.ref.improve||""})];
     }
   }catch(e){}
 }
@@ -887,6 +898,7 @@ function sc(v){return v===null?"var(--t3)":v>=.8?"var(--g)":v>=.5?"var(--a)":"va
 function sbg(v){return v===null?"var(--s2)":v>=.8?"var(--gbg)":v>=.5?"var(--abg)":"var(--rbg)"}
 function sbd(v){return v===null?"var(--bd)":v>=.8?"var(--gbd)":v>=.5?"var(--abd)":"var(--rbd)"}
 function esc(s){return (s||"").replace(/</g,"&lt;");}
+function escAttr(s){return (s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 function addTrade(){
@@ -958,7 +970,12 @@ function toggleExpand(id){
 }
 
 // ── Reflections — dated journal entries, separate from individual trades ─────
-function blankRef(){return{date:td(),best:"",broke:"",improve:""};}
+function defaultSections(){return[
+  {q:"What setups worked best?",a:""},
+  {q:"Where did I break rules?",a:""},
+  {q:"What will I improve next?",a:""}
+];}
+function blankRef(){return{periodType:"week",periodDate:ymd(startOfWeek(new Date())),entryDate:td(),sections:defaultSections()};}
 let refForm=blankRef(),editingRefId=null;
 function toggleRefForm(){
   if(showRefForm)editingRefId=null;
@@ -968,13 +985,36 @@ function toggleRefForm(){
 }
 function editReflection(id){
   const r=reflections.find(x=>x.id===id);if(!r)return;
-  refForm={...r};editingRefId=id;showRefForm=true;
+  refForm={...r,sections:r.sections.map(s=>({...s}))};editingRefId=id;showRefForm=true;
   window.scrollTo({top:0,behavior:"smooth"});
   render();
 }
+function syncRefFormFromDOM(){
+  const dEl=document.getElementById("rf-entrydate");if(dEl&&dEl.value)refForm.entryDate=dEl.value;
+  if(refForm.periodType==="week"){
+    const el=document.getElementById("rf-weekdate");
+    if(el&&el.value)refForm.periodDate=ymd(startOfWeek(parseYMD(el.value)));
+  }else{
+    const el=document.getElementById("rf-monthdate");
+    if(el&&el.value){const p=el.value.split("-");refForm.periodDate=`${p[0]}-${p[1]}-01`;}
+  }
+  refForm.sections=refForm.sections.map((s,i)=>{
+    const qEl=document.getElementById(`rf-sq-${i}`),aEl=document.getElementById(`rf-sa-${i}`);
+    return{q:qEl?qEl.value:s.q,a:aEl?aEl.value:s.a};
+  });
+}
+function setRefPeriodType(type){
+  syncRefFormFromDOM();
+  refForm.periodType=type;
+  refForm.periodDate=type==="week"?ymd(startOfWeek(parseYMD(refForm.periodDate))):`${refForm.periodDate.slice(0,7)}-01`;
+  render();
+}
+function updateRefPeriodDate(){syncRefFormFromDOM();render();}
+function addRefSection(){syncRefFormFromDOM();refForm.sections.push({q:"",a:""});render();}
+function removeRefSection(i){syncRefFormFromDOM();refForm.sections.splice(i,1);render();}
 function saveReflection(){
-  ["date","best","broke","improve"].forEach(k=>{const el=document.getElementById(`rf-${k}`);if(el)refForm[k]=el.value;});
-  if(!refForm.date)return;
+  syncRefFormFromDOM();
+  if(!refForm.entryDate||!refForm.periodDate)return;
   if(editingRefId!==null){
     reflections=reflections.map(r=>r.id===editingRefId?{...refForm,id:editingRefId}:r);
   }else{
@@ -983,10 +1023,29 @@ function saveReflection(){
   refForm=blankRef();editingRefId=null;showRefForm=false;save();render();
 }
 function delReflection(id){if(!confirm("Delete this reflection? This can't be undone."))return;reflections=reflections.filter(r=>r.id!==id);save();render();}
+function fmtDMY(d){return `${d.getDate()} ${MON[d.getMonth()].slice(0,3).toUpperCase()} ${d.getFullYear()}`;}
+function refHeaderLabel(r){
+  const d=parseYMD(r.periodDate);
+  if(r.periodType==="month")return `${MON[d.getMonth()].toUpperCase()} ${d.getFullYear()}`;
+  const e=new Date(d);e.setDate(e.getDate()+6);
+  return `WEEK: ${fmtDMY(d)} - ${fmtDMY(e)}`;
+}
+function reflectionRange(r){
+  const d=parseYMD(r.periodDate);
+  if(r.periodType==="month")return{start:startOfMonth(d),end:endOfMonth(d)};
+  const s=new Date(d);s.setHours(0,0,0,0);
+  const e=new Date(d);e.setDate(e.getDate()+6);e.setHours(23,59,59,999);
+  return{start:s,end:e};
+}
+function nonEmptySections(r){return r.sections.filter(s=>(s.q&&s.q.trim())||(s.a&&s.a.trim()));}
+function pWrap(s){
+  const lines=(s||"").split("\n");
+  return lines.map((l,i)=>`<div${i<lines.length-1?' style="margin-bottom:10px"':""}>${esc(l)||"&nbsp;"}</div>`).join("");
+}
 function getFilteredReflections(){
   const r=periodRange();
   if(!r)return reflections.slice();
-  return reflections.filter(x=>{const d=parseYMD(x.date);return d>=r.start&&d<=r.end;});
+  return reflections.filter(x=>{const rr=reflectionRange(x);return rr.start<=r.end&&rr.end>=r.start;});
 }
 
 // ── Screenshots — resize/compress client-side before storing as base64 ───────
@@ -1213,7 +1272,7 @@ function confirmExportSummary(){
 
 // ── Export / Import ───────────────────────────────────────────────────────────
 function expData(){const b=new Blob([JSON.stringify({trades,reflections,dq},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`J.'s TS A${ddmmyy(new Date())}.json`;a.click();}
-function impData(){const i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.trades)trades=d.trades.map(migrateTrade);if(Array.isArray(d.reflections))reflections=d.reflections;else if(d.ref&&(d.ref.best||d.ref.broke||d.ref.improve))reflections=[{id:Date.now(),date:td(),best:d.ref.best||"",broke:d.ref.broke||"",improve:d.ref.improve||""}];if(d.dq&&d.dq.length)dq=d.dq;save();render();}catch(e){alert("Invalid file.")}};r.readAsText(f);};i.click();}
+function impData(){const i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.trades)trades=d.trades.map(migrateTrade);if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);else if(d.ref&&(d.ref.best||d.ref.broke||d.ref.improve))reflections=[migrateReflection({id:Date.now(),date:td(),best:d.ref.best||"",broke:d.ref.broke||"",improve:d.ref.improve||""})];if(d.dq&&d.dq.length)dq=d.dq;save();render();}catch(e){alert("Invalid file.")}};r.readAsText(f);};i.click();}
 
 function expCSV(){
   const list=getFilteredTrades();
@@ -1295,12 +1354,16 @@ function expSummaryHTML(includeStats){
   const dqJSON=JSON.stringify(dq).replace(/</g,"\\u003c");
   const losscatsJSON=JSON.stringify(LOSSCATS).replace(/</g,"\\u003c");
 
-  const reflectionCards=refList.map(rf=>`<div class="tcard">
-      <div class="thead2"><strong>${dispDate(rf.date)}</strong></div>
-      ${rf.best&&rf.best.trim()?`<div class="tcomment" style="margin-top:6px;padding-top:0;border-top:none"><strong style="color:var(--t2)">What worked:</strong> ${esc(rf.best)}</div>`:""}
-      ${rf.broke&&rf.broke.trim()?`<div class="tcomment"><strong style="color:var(--t2)">Where I broke rules:</strong> ${esc(rf.broke)}</div>`:""}
-      ${rf.improve&&rf.improve.trim()?`<div class="tcomment"><strong style="color:var(--t2)">Next improvement:</strong> ${esc(rf.improve)}</div>`:""}
-    </div>`).join("");
+  const reflectionCards=refList.map(rf=>{
+    const secs=nonEmptySections(rf);
+    return `<div class="tcard">
+      <div class="thead2"><strong>${refHeaderLabel(rf)}</strong><span style="font-size:11px;color:var(--t3);font-weight:400">entry date: ${ddmmyy(parseYMD(rf.entryDate))}</span></div>
+      ${secs.map((s,i)=>`<div class="tcomment"${i===0?' style="margin-top:10px;padding-top:0;border-top:none"':' style="margin-top:14px;padding-top:14px"'}>
+        <div style="font-weight:600;color:var(--t2);margin-bottom:4px">${esc(s.q)}</div>
+        <div>${pWrap(s.a)}</div>
+      </div>`).join("")}
+    </div>`;
+  }).join("");
 
   const eqPointsJSON=JSON.stringify(equityPoints(en));
 
@@ -2447,35 +2510,55 @@ function reflectionH(){
 ${showRefForm?`
 <div class="fcard">
   <div style="font-size:var(--fmd);font-weight:700;margin-bottom:1rem">${editingRefId!==null?"edit reflection":"new reflection entry"}</div>
-  <div class="fgrid" style="max-width:220px;margin-bottom:14px">
-    <div class="field"><label>date</label><input id="rf-date" type="date" value="${refForm.date}"/></div>
+  <div style="display:flex;gap:6px;margin-bottom:14px">
+    <button class="pbtn${refForm.periodType==="week"?" on":""}" onclick="setRefPeriodType('week')">weekly</button>
+    <button class="pbtn${refForm.periodType==="month"?" on":""}" onclick="setRefPeriodType('month')">monthly</button>
   </div>
-  <div class="refq">What setups worked best?</div>
-  <textarea id="rf-best" rows="2" placeholder="write your thoughts here...">${refForm.best}</textarea>
-  <div class="refq">Where did I break rules?</div>
-  <textarea id="rf-broke" rows="2" placeholder="write your thoughts here...">${refForm.broke}</textarea>
-  <div class="refq">What will I improve next?</div>
-  <textarea id="rf-improve" rows="2" placeholder="write your thoughts here...">${refForm.improve}</textarea>
-  <button class="btn btng" onclick="saveReflection()">${editingRefId!==null?"save changes":"save reflection"}</button>
+  <div class="fgrid" style="max-width:460px;margin-bottom:8px">
+    ${refForm.periodType==="week"
+      ?`<div class="field"><label>week containing</label><input id="rf-weekdate" type="date" value="${refForm.periodDate}" onchange="updateRefPeriodDate()"/></div>`
+      :`<div class="field"><label>month</label><input id="rf-monthdate" type="month" value="${refForm.periodDate.slice(0,7)}" onchange="updateRefPeriodDate()"/></div>`}
+    <div class="field"><label>entry date</label><input id="rf-entrydate" type="date" value="${refForm.entryDate}" onchange="updateRefPeriodDate()"/></div>
+  </div>
+  <div style="font-size:var(--fxs);color:var(--t3);font-weight:700;letter-spacing:.05em;margin-bottom:16px">${refHeaderLabel(refForm)}</div>
+  ${refForm.sections.map((s,i)=>`
+  <div style="margin-bottom:12px">
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <input id="rf-sq-${i}" value="${escAttr(s.q)}" placeholder="question / section title" style="flex:1;height:34px;padding:8px 10px;font-family:var(--sans);font-size:var(--fbase);font-weight:600;border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t);outline:none"/>
+      <button class="delbtn" onclick="removeRefSection(${i})" title="remove section">×</button>
+    </div>
+    <textarea id="rf-sa-${i}" rows="2" placeholder="write your thoughts here...">${esc(s.a)}</textarea>
+  </div>`).join("")}
+  <button class="btn" style="margin-bottom:14px" onclick="addRefSection()">+ add section</button>
+  <div>
+    <button class="btn btng" onclick="saveReflection()">${editingRefId!==null?"save changes":"save reflection"}</button>
+  </div>
 </div>`:""}
 
 ${reflections.length===0
   ?`<div class="empty"><div style="font-size:28px;margin-bottom:8px">📝</div><p>no reflections yet — jot down your first weekly reflection above</p></div>`
   :filteredOut
   ?`<div class="empty"><div style="font-size:28px;margin-bottom:8px">🗓️</div><p>no reflections in this period — try a different week/month or switch back to "All"</p></div>`
-  :list.map(r=>`
+  :list.map(r=>{
+    const secs=nonEmptySections(r);
+    return `
 <div class="fcard" style="margin-bottom:10px">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <span style="font-size:var(--fsm);color:var(--t2);font-weight:700">${dispDate(r.date)}</span>
-    <div style="display:flex;gap:2px">
-      <button class="delbtn" onclick="editReflection(${r.id})" title="edit reflection">✎</button>
-      <button class="delbtn" onclick="delReflection(${r.id})" title="delete reflection">×</button>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+    <span style="font-size:var(--fsm);color:var(--t2);font-weight:700;letter-spacing:.03em">${refHeaderLabel(r)}</span>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:var(--fxs);color:var(--t3)">entry date: ${ddmmyy(parseYMD(r.entryDate))}</span>
+      <div style="display:flex;gap:2px">
+        <button class="delbtn" onclick="editReflection(${r.id})" title="edit reflection">✎</button>
+        <button class="delbtn" onclick="delReflection(${r.id})" title="delete reflection">×</button>
+      </div>
     </div>
   </div>
-  ${r.best&&r.best.trim()?`<div class="refq" style="margin-bottom:2px">What setups worked best?</div><div style="font-size:var(--fbase);color:var(--t2);margin-bottom:10px;line-height:1.5">${esc(r.best)}</div>`:""}
-  ${r.broke&&r.broke.trim()?`<div class="refq" style="margin-bottom:2px">Where did I break rules?</div><div style="font-size:var(--fbase);color:var(--t2);margin-bottom:10px;line-height:1.5">${esc(r.broke)}</div>`:""}
-  ${r.improve&&r.improve.trim()?`<div class="refq" style="margin-bottom:2px">What will I improve next?</div><div style="font-size:var(--fbase);color:var(--t2);line-height:1.5">${esc(r.improve)}</div>`:""}
-</div>`).join("")}
+  ${secs.map((s,i)=>`<div style="${i<secs.length-1?"margin-bottom:14px;padding-bottom:14px;border-bottom:.5px solid var(--bd)":""}">
+    <div class="refq" style="margin-bottom:6px">${esc(s.q)}</div>
+    <div style="font-size:var(--fbase);color:var(--t2);line-height:1.5">${pWrap(s.a)}</div>
+  </div>`).join("")}
+</div>`;
+  }).join("")}
 </div>`;
 }
 
