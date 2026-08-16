@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>J. — Trading Journal</title>
+<title>trading journal</title>
+<!-- Favicon follows the BROWSER/OS's prefers-color-scheme, not the in-app manual theme toggle (favicons can't read page JS state) -->
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23A15B78'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'><circle%20cx='12'%20cy='12'%20r='9'/><path%20d='M10%208.3%20L16%2012%20L10%2015.7%20Z'%20fill='%23A15B78'%20stroke='%23A15B78'%20stroke-linejoin='round'/></svg>" media="(prefers-color-scheme: light)"/>
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23E0AFC2'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'><circle%20cx='12'%20cy='12'%20r='9'/><path%20d='M10%208.3%20L16%2012%20L10%2015.7%20Z'%20fill='%23E0AFC2'%20stroke='%23E0AFC2'%20stroke-linejoin='round'/></svg>" media="(prefers-color-scheme: dark)"/>
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23E0AFC2'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'><circle%20cx='12'%20cy='12'%20r='9'/><path%20d='M10%208.3%20L16%2012%20L10%2015.7%20Z'%20fill='%23E0AFC2'%20stroke='%23E0AFC2'%20stroke-linejoin='round'/></svg>"/>
 <script>(function(){try{var t=localStorage.getItem("wss_theme")||"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();</script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
@@ -57,6 +61,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height:100v
 h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .sub{font-size:var(--fbase);color:var(--t2);margin-bottom:1.75rem}
 .themetoggle{width:16px;height:16px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+/* Fast custom tooltip — shows immediately on hover via CSS rather than relying on
+   the native title attribute, whose browser-controlled delay made it feel like it
+   only worked "sometimes". title= is kept alongside data-tt as an accessible fallback. */
+[data-tt]{position:relative}
+[data-tt]::after{content:attr(data-tt);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--t);color:var(--bg);font-size:11px;font-weight:500;line-height:1.3;padding:5px 9px;border-radius:6px;white-space:nowrap;max-width:220px;opacity:0;pointer-events:none;transition:opacity .1s;z-index:80;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+[data-tt]:hover::after{opacity:1;transition-delay:.15s}
 .themetoggle:hover{opacity:.75}
 .themetoggle svg{width:16px;height:16px;display:block}
 .banner{background:var(--s2);border:.5px solid var(--bd);border-radius:var(--radl);padding:10px 14px;margin-bottom:.9rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:var(--fbase);color:var(--t2)}
@@ -442,8 +452,11 @@ let logFilters={ticker:[],setup:[],wl:[],process:[],lossCat:[]}; // each value i
 let logFilterOpen=null;   // which filter's dropdown is open: 'ticker'|'setup'|'wl'|'process'|'lossCat'|null
 let logSearchOpen=false;  // search field expanded/collapsed
 let logSearchQuery="";    // free-text search over the trade log
+let logSearchLocked=false;// true after Enter — search stays open through outside clicks until Esc
 let refSearchOpen=false;  // search field expanded/collapsed (reflections)
 let refSearchQuery="";    // free-text search over reflections
+let refSearchLocked=false;// true after Enter — search stays open through outside clicks until Esc
+let calendarCollapsed=false; // dashboard's calendar section collapse state
 let resultManual=false;
 let fillSeq=1;
 
@@ -556,17 +569,17 @@ function fmtSyncTime(iso){
   return `${dd} ${mon} ${yy}, ${hh}:${mi}`;
 }
 function driveStatusHtml(){
-  if(driveConnecting||driveSyncing)return`<button class="topicon spin" onclick="driveForceStop()" title="${driveConnecting?"connecting…":"syncing…"} — hover and click to stop"><span class="spin-ico">${DRIVE_SPIN_SVG}</span><span class="stop-ico">${ICON_X}</span></button>`;
-  if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" title="newer changes were saved from another device — click to reload them">${ICON_WARN}</button>`;
-  if(drivePendingSync)return`<span class="topicon warn" title="offline — your changes are saved locally and will sync automatically once you're back online">${ICON_CLOCK}</span>`;
-  if(driveSyncError)return`<span class="topicon err" title="${escAttr(driveSyncError)}">${DRIVE_ERR_SVG}</span>`;
+  if(driveConnecting||driveSyncing)return`<button class="topicon spin" onclick="driveForceStop()" title="${driveConnecting?"connecting…":"syncing…"} — hover and click to stop" data-tt="${driveConnecting?"connecting…":"syncing…"} (click to stop)"><span class="spin-ico">${DRIVE_SPIN_SVG}</span><span class="stop-ico">${ICON_X}</span></button>`;
+  if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" title="newer changes were saved from another device — click to reload them" data-tt="newer changes saved elsewhere — click to reload">${ICON_WARN}</button>`;
+  if(drivePendingSync)return`<span class="topicon warn" title="offline — your changes are saved locally and will sync automatically once you're back online" data-tt="offline — will sync automatically">${ICON_CLOCK}</span>`;
+  if(driveSyncError)return`<span class="topicon err" title="${escAttr(driveSyncError)}" data-tt="${escAttr(driveSyncError)}">${DRIVE_ERR_SVG}</span>`;
   // item 6 — connected: the checkmark is now a dropdown trigger (account info,
   // switch account, disconnect, last synced) instead of an immediate disconnect.
   if(driveConnected)return`<span class="drivemenu-wrap">
-    <button class="topicon ok" onclick="toggleDriveMenu(event)" title="account">${ICON_CHECK}</button>
+    <button class="topicon ok" onclick="toggleDriveMenu(event)" title="connected to Google Drive — click for account options" data-tt="connected — click for account options">${ICON_CHECK}</button>
     ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
-  return`<button class="topicon" onclick="connectDrive()" title="connect Google Drive">${ICON_LINK}</button>`;
+  return`<button class="topicon" onclick="connectDrive()" title="connect Google Drive" data-tt="connect Google Drive">${ICON_LINK}</button>`;
 }
 // item 6 — the connected-account dropdown itself: email (only shown here, never
 // at rest on the topbar), switch account, disconnect, and last synced (item 4).
@@ -588,7 +601,7 @@ function closeDriveMenu(){
   driveMenuOpen=false;
   renderDriveStatus();
 }
-document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen)closeLogSearch();if(refSearchOpen)closeRefSearch();});
+document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen&&!logSearchLocked)closeLogSearch();if(refSearchOpen&&!refSearchLocked)closeRefSearch();});
 async function driveFetchUserEmail(){
   try{
     const res=await driveApiFetch("https://www.googleapis.com/oauth2/v3/userinfo");
@@ -1110,7 +1123,7 @@ function periodRange(){
   if(periodMode==="week"){
     const s=startOfWeek(periodAnchor),e=endOfWeek(periodAnchor);
     const label=s.getMonth()===e.getMonth()
-      ?`Week of ${MON[s.getMonth()].slice(0,3)} ${s.getDate()}–${e.getDate()}, ${e.getFullYear()}`
+      ?`Week of ${MON[s.getMonth()].slice(0,3)} ${s.getDate()} – ${e.getDate()}, ${e.getFullYear()}`
       :`Week of ${MON[s.getMonth()].slice(0,3)} ${s.getDate()} – ${MON[e.getMonth()].slice(0,3)} ${e.getDate()}, ${e.getFullYear()}`;
     return{start:s,end:e,label};
   }
@@ -2168,7 +2181,7 @@ h1{font-size:22px;font-weight:600;margin-bottom:4px}
 /* Interactive trade log (sortable / filterable / expandable, matches live journal) */
 .btn{font-family:var(--sans);font-size:var(--fbase);padding:7px 16px;border-radius:var(--rad);border:.5px solid var(--bdm);background:var(--s2);color:var(--t);cursor:pointer;transition:all .15s}
 .btn:hover{background:var(--surface)}
-.lbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px}
+.lbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding:0 3px;flex-wrap:wrap;gap:8px}
 .lcount{font-size:var(--fbase);color:var(--t2)}
 .twrap{overflow-x:auto;border:.5px solid var(--bd);border-radius:var(--radl)}
 table{width:100%;border-collapse:collapse;font-size:var(--fsm)}
@@ -2737,7 +2750,8 @@ function periodBarH(filteredCount,totalCount){
 }
 
 // ── Calendar heatmap — includes a weekly "Total" column ───────────────────────
-function calendarH(en){
+function calendarH(en,opts){
+  opts=opts||{};
   if(periodMode!=="week"&&periodMode!=="month")return"";
   const byDay=aggregateByDay(en);
   function cellFor(dObj,label){
@@ -2771,9 +2785,14 @@ function calendarH(en){
     for(let i=0;i<7;i++){const d=new Date(s);d.setDate(s.getDate()+i);week.push(d);}
     rowsHtml=week.map((d,i)=>cellFor(d,`${DOW[i]} ${d.getDate()}`)).join("")+totalCell(week);
   }
-  const title=mode==="month"?"calendar":"week overview";
-  return`<div class="calwrap"><p class="seclab">${title}</p><div class="calgrid">${[...DOW,"Total"].map(d=>`<div class="caldow">${d}</div>`).join("")}${rowsHtml}</div></div>`;
+  const title=opts.label!==undefined?opts.label:(mode==="month"?"calendar":"week overview");
+  const collapsible=!!opts.collapsible;
+  const arrow=collapsible?(opts.collapsed?"▸ ":"▾ "):"";
+  const headerHtml=`<p class="seclab"${collapsible?' style="cursor:pointer;user-select:none" onclick="toggleCalendarCollapse()"':""}>${arrow}${title}</p>`;
+  const gridHtml=(collapsible&&opts.collapsed)?"":`<div class="calgrid">${[...DOW,"Total"].map(d=>`<div class="caldow">${d}</div>`).join("")}${rowsHtml}</div>`;
+  return`<div class="calwrap">${headerHtml}${gridHtml}</div>`;
 }
+function toggleCalendarCollapse(){calendarCollapsed=!calendarCollapsed;render();}
 
 // ── Main render ───────────────────────────────────────────────────────────────
 function render(){
@@ -2795,13 +2814,13 @@ function render(){
     <div class="topicons">
       <span id="drive-status">${driveStatusHtml()}</span>
       <span class="iconsep">|</span>
-      <button class="topicon" onclick="impData()" title="import">${ICON_UP}</button>
+      <button class="topicon" onclick="impData()" title="import backup (.json)" data-tt="import backup (.json)">${ICON_UP}</button>
       <span class="iconsep">|</span>
-      <button class="topicon" onclick="expData()" title="export .json">${ICON_DOWN}</button>
+      <button class="topicon" onclick="expData()" title="export backup (.json)" data-tt=".json export">${ICON_DOWN}</button>
       <span class="iconsep">|</span>
-      <button class="topicon" onclick="openExportOptions()" title="share summary (.html)">${ICON_DOWN}${ICON_DOC}</button>
+      <button class="topicon" onclick="openExportOptions()" title="share summary (.html)" data-tt=".html summary export">${ICON_DOWN}${ICON_DOC}</button>
       <span class="iconsep">|</span>
-      <button class="themetoggle" onclick="toggleTheme()" title="toggle theme">${isDark?ICON_SUN:ICON_MOON}</button>
+      <button class="themetoggle" onclick="toggleTheme()" title="${isDark?"switch to light mode":"switch to dark mode"}" data-tt="${isDark?"switch to light mode":"switch to dark mode"}">${isDark?ICON_SUN:ICON_MOON}</button>
     </div>
   </div>
 </div>
@@ -2922,7 +2941,33 @@ function clearOneLogFilter(key,ev){
   render();
 }
 function closeLogFilterDropdown(){if(logFilterOpen){logFilterOpen=null;render();}}
-function renderFilterBtn(key,allLabel,opts){
+// Relative option counts — for a given dropdown (key) and candidate value, counts
+// trades that match every OTHER currently-active filter (and the search box) plus
+// this specific value, so counts update live as other filters are picked (e.g.
+// picking ticker=MCL makes every other dropdown's counts reflect MCL-only trades).
+function countForFilterOption(key,val,list){
+  return list.filter(t=>{
+    if(key!=="ticker"&&logFilters.ticker.length&&!logFilters.ticker.includes(t.ticker.toUpperCase()))return false;
+    if(key!=="setup"&&logFilters.setup.length&&!logFilters.setup.includes(t.setup))return false;
+    if(key!=="wl"&&logFilters.wl.length&&!logFilters.wl.includes(t.wl))return false;
+    if(key!=="process"&&logFilters.process.length){
+      if(t.isGood===null)return false;
+      const procVal=t.isGood?"good":"bad";
+      if(!logFilters.process.includes(procVal))return false;
+    }
+    if(key!=="lossCat"&&logFilters.lossCat.length&&!logFilters.lossCat.includes(t.lossCat))return false;
+    if(!logSearchMatch(t))return false;
+    switch(key){
+      case"ticker":return t.ticker.toUpperCase()===val;
+      case"setup":return t.setup===val;
+      case"wl":return t.wl===val;
+      case"process":return t.isGood!==null&&(t.isGood?"good":"bad")===val;
+      case"lossCat":return t.lossCat===val;
+      default:return false;
+    }
+  }).length;
+}
+function renderFilterBtn(key,allLabel,opts,list){
   const cur=logFilters[key];
   const open=logFilterOpen===key;
   let curLabel=allLabel;
@@ -2934,17 +2979,22 @@ function renderFilterBtn(key,allLabel,opts){
     curLabel=`${match?match.label:cur[0]} +${cur.length-1}`;
   }
   return`<div class="filterdd-wrap">
-    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" title="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
+    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" title="filter by ${allLabel.replace('all ',"")}" data-tt="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
     ${open?`<div class="filterdd" onclick="event.stopPropagation()">
       <button class="filterdd-row" onclick="clearOneLogFilter('${key}',event)">${allLabel}</button>
-      ${opts.map(o=>`<label class="filterdd-row filterdd-check"><input type="checkbox" ${cur.includes(o.val)?"checked":""} onchange="toggleLogFilterValue('${key}','${o.val}',event)"/>${esc(o.label)}</label>`).join("")}
+      ${opts.map(o=>`<label class="filterdd-row filterdd-check"><input type="checkbox" ${cur.includes(o.val)?"checked":""} onchange="toggleLogFilterValue('${key}','${o.val}',event)"/>${esc(o.label)} <span style="color:var(--t3)">(${list?countForFilterOption(key,o.val,list):0})</span></label>`).join("")}
     </div>`:""}
   </div>`;
 }
 // item 1 (follow-up) — search icon/field toggle + live search-as-you-type.
+// logSearchLocked/refSearchLocked: once the person presses Enter in the search
+// box, it "holds" — stays open through outside clicks (e.g. expanding collapsed
+// rows one by one) instead of auto-closing — and only exits on Esc or clicking
+// the search icon again.
 function toggleLogSearch(ev){
   if(ev)ev.stopPropagation();
   logSearchOpen=!logSearchOpen;
+  logSearchLocked=false;
   if(!logSearchOpen)logSearchQuery="";
   render();
   if(logSearchOpen){
@@ -2953,7 +3003,7 @@ function toggleLogSearch(ev){
 }
 function closeLogSearch(){
   if(!logSearchOpen)return;
-  logSearchOpen=false;logSearchQuery="";
+  logSearchOpen=false;logSearchQuery="";logSearchLocked=false;
   render();
 }
 function onLogSearchInput(el){
@@ -2965,9 +3015,14 @@ function onLogSearchInput(el){
     if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
   });
 }
+function onLogSearchKeydown(ev){
+  if(ev.key==="Enter"){ev.preventDefault();logSearchLocked=true;}
+  else if(ev.key==="Escape"){ev.preventDefault();closeLogSearch();}
+}
 function toggleRefSearch(ev){
   if(ev)ev.stopPropagation();
   refSearchOpen=!refSearchOpen;
+  refSearchLocked=false;
   if(!refSearchOpen)refSearchQuery="";
   render();
   if(refSearchOpen){
@@ -2976,7 +3031,7 @@ function toggleRefSearch(ev){
 }
 function closeRefSearch(){
   if(!refSearchOpen)return;
-  refSearchOpen=false;refSearchQuery="";
+  refSearchOpen=false;refSearchQuery="";refSearchLocked=false;
   render();
 }
 function onRefSearchInput(el){
@@ -2987,6 +3042,10 @@ function onRefSearchInput(el){
     const ni=document.getElementById("refsearch-input");
     if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
   });
+}
+function onRefSearchKeydown(ev){
+  if(ev.key==="Enter"){ev.preventDefault();refSearchLocked=true;}
+  else if(ev.key==="Escape"){ev.preventDefault();closeRefSearch();}
 }
 function refSearchMatch(r){
   // Matches header label, entry date, and every section's question/answer text —
@@ -3070,26 +3129,28 @@ function logH(en){
     return`<th class="sortable${active?" sorted":""}" onclick="setLogSort('${h.key}')" title="sort by ${h.label}">${h.label}${arrow}</th>`;
   }).join("");
   return`<div>
-${trades.length>0?`<div class="logfilterbar">
-  ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})))}
+<div class="logfilterbar">
+  ${trades.length>0?`
+  ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})),en)}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})))}
+  ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})),en)}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("wl","all W/L",[{val:"Win",label:"Win"},{val:"Loss",label:"Loss"},{val:"BE",label:"Breakeven"}])}
+  ${renderFilterBtn("wl","all W/L",[{val:"Win",label:"Win"},{val:"Loss",label:"Loss"},{val:"BE",label:"Breakeven"}],en)}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}])}
+  ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}],en)}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})))}
-  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" title="clear filters">${ICON_X}</button>`:""}
+  ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})),en)}
+  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" title="clear all filters" data-tt="clear all filters">${ICON_X}</button>`:""}
+  `:""}
   <div class="logbaricons">
     <span class="searchwrap">
-      ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="search trades..." value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)"/></span>`
-      :`<button class="topicon" onclick="toggleLogSearch(event)" title="search trades">${ICON_SEARCH}</button>`}
+      ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="search trades... (enter to hold, esc to exit)" value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)" onkeydown="onLogSearchKeydown(event)"/></span>`
+      :`<button class="topicon" onclick="toggleLogSearch(event)" title="search trades" data-tt="search trades">${ICON_SEARCH}</button>`}
     </span>
     <span class="iconsep">|</span>
-    <button class="topicon" onclick="tog()" title="${showForm?"cancel":"add trade"}">${showForm?ICON_X:ICON_PLUS}</button>
+    <button class="topicon" onclick="tog()" title="${showForm?"cancel":"add trade"}" data-tt="${showForm?"cancel":"add trade"}">${showForm?ICON_X:ICON_PLUS}</button>
   </div>
-</div>`:""}
+</div>
 
 ${showForm?`
 <div class="fcard">
@@ -3193,28 +3254,39 @@ ${trades.length>0?`<div class="lcountbottom">${logList.length} of ${trades.lengt
 
 // ── Dashboard tab ─────────────────────────────────────────────────────────────
 const SEP=`<span class="statsep">|</span>`;
-function statRowH(s,title){
+// Every stat card is regular weight/smaller now except the P&L cell (opts.hero),
+// which keeps the bold, larger treatment so it still reads as the headline number.
+function statCard(label,value,color,opts){
+  opts=opts||{};
+  const valCls=opts.hero?"sval sval-hero":"sval";
+  const bar=opts.bar!==undefined?`<div class="svalbar"><div class="svalbarfill" style="width:${opts.bar}%;background:${color||"var(--t3)"}"></div></div>`:"";
+  const sub=opts.sub?`<div class="svalsub" style="color:${opts.subColor||"var(--t2)"}">${opts.sub}</div>`:"";
+  return`<div class="scard"><div class="slabel">${label.toUpperCase()}</div><div class="pbody">${bar}<div class="${valCls}" style="color:${color||"var(--t)"}">${value}</div>${sub}</div></div>`;
+}
+function statGridH(s,title,ec,bc,em){
   const netColor=s.net>=0?"var(--g)":"var(--r)";
   const wrColor=s.wr!==null?(s.wr>=.5?"var(--g)":"var(--r)"):"var(--t3)";
-  const row1=[
-    [title,cu(s.net),netColor],
-    ["Trading Days",`${s.tradingDays}D ${SEP} <span style="color:var(--g)">${s.greenDays}G</span> ${SEP} <span style="color:var(--r)">${s.redDays}R</span>`,null],
-    ["Trades",`${s.n} ${SEP} <span style="color:var(--g)">${s.wc}W</span> ${SEP} <span style="color:var(--r)">${s.lc}L</span>`,null],
-  ];
   const bestCol=s.bestDay?(s.bestDay.net<0?"var(--r)":"var(--g)"):"var(--t3)";
   const worstCol=s.worstDay?(s.worstDay.net<0?"var(--r)":"var(--a)"):"var(--t3)";
+  const edgeSub=s.edge===null?"no data yet":s.edge>0?"positive edge ↑":"negative edge ↓";
+  const row1=[
+    statCard(title,cu(s.net),netColor,{hero:true}),
+    statCard("Trading Days",`${s.tradingDays}D ${SEP} <span style="color:var(--g)">${s.greenDays}G</span> ${SEP} <span style="color:var(--r)">${s.redDays}R</span>`,null),
+    statCard("Trades",`${s.n} ${SEP} <span style="color:var(--g)">${s.wc}W</span> ${SEP} <span style="color:var(--r)">${s.lc}L</span>`,null),
+  ];
   const row2=[
-    ["Win Rate",pc(s.wr),wrColor],
-    ["Best / Worst Day",`<span style="color:${bestCol}">${s.bestDay?cu(s.bestDay.net):"—"}</span> ${SEP} <span style="color:${worstCol}">${s.worstDay?cu(s.worstDay.net):"—"}</span>`,null],
+    statCard("Win Rate",pc(s.wr),wrColor),
+    statCard("Your Edge",s.edge!==null?cu(s.edge):"—",ec,{sub:edgeSub,subColor:ec}),
+    statCard("Best / Worst Day",`<span style="color:${bestCol}">${s.bestDay?cu(s.bestDay.net):"—"}</span> ${SEP} <span style="color:${worstCol}">${s.worstDay?cu(s.worstDay.net):"—"}</span>`,null),
   ];
   const row3=[
-    ["Avg Win / Loss",`<span style="color:var(--g)">${s.aw!==null?cu(s.aw):"—"}</span> ${SEP} <span style="color:var(--r)">${s.al!==null?cu(-s.al):"—"}</span>`,null],
-    ["Avg RR Plan / Realized",`${s.ar!==null?`${f2(s.ar)}:1`:"—"} ${SEP} ${s.arReal!==null?`${f2(s.arReal)}:1`:"—"}`,null],
+    statCard("Avg Win / Loss",`<span style="color:var(--g)">${s.aw!==null?cu(s.aw):"—"}</span> ${SEP} <span style="color:var(--r)">${s.al!==null?cu(-s.al):"—"}</span>`,null),
+    statCard("Avg RR Plan / Realized",`${s.ar!==null?`${f2(s.ar)}:1`:"—"} ${SEP} ${s.arReal!==null?`${f2(s.arReal)}:1`:"—"}`,null),
+    statCard("Rule Execution",s.ep!==null?pc(s.ep):"—",bc,{bar:s.ep!==null?(s.ep*100).toFixed(1):0,sub:em,subColor:bc}),
   ];
-  const card=([l,v,c])=>`<div class="scard"><div class="slabel">${l.toUpperCase()}</div><div class="sval" style="color:${c||"var(--t)"}">${v}</div></div>`;
-  return`<div class="statrow3">${row1.map(card).join("")}</div>
-<div class="statrow12">${row2.map(card).join("")}</div>
-<div class="statrow2">${row3.map(card).join("")}</div>`;
+  return`<div class="statrow3">${row1.join("")}</div>
+<div class="statrow3">${row2.join("")}</div>
+<div class="statrow3">${row3.join("")}</div>`;
 }
 function dashH(s,en,ec,bc,em){
   const periodTitle=periodMode==="week"?"Week P&L":periodMode==="month"?"Month P&L":periodMode==="custom"?"Range P&L":"All-Time P&L";
@@ -3355,11 +3427,11 @@ function reflectionH(){
   <span class="lcount" style="font-size:var(--fxs);font-weight:300">${list.length} of ${reflections.length} reflection${reflections.length!==1?"s":""} shown</span>
   <div class="logbaricons">
     <span class="searchwrap">
-      ${refSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="refsearch-input" placeholder="search reflections..." value="${escAttr(refSearchQuery)}" oninput="onRefSearchInput(this)"/></span>`
-      :`<button class="topicon" onclick="toggleRefSearch(event)" title="search reflections">${ICON_SEARCH}</button>`}
+      ${refSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="refsearch-input" placeholder="search reflections... (enter to hold, esc to exit)" value="${escAttr(refSearchQuery)}" oninput="onRefSearchInput(this)" onkeydown="onRefSearchKeydown(event)"/></span>`
+      :`<button class="topicon" onclick="toggleRefSearch(event)" title="search reflections" data-tt="search reflections">${ICON_SEARCH}</button>`}
     </span>
     <span class="iconsep">|</span>
-    <button class="topicon" onclick="toggleRefForm()" title="${showRefForm?"cancel":"add reflection"}">${showRefForm?ICON_X:ICON_PLUS}</button>
+    <button class="topicon" onclick="toggleRefForm()" title="${showRefForm?"cancel":"add reflection"}" data-tt="${showRefForm?"cancel":"add reflection"}">${showRefForm?ICON_X:ICON_PLUS}</button>
   </div>
 </div>
 
