@@ -52,8 +52,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height:100v
 .brand{font-size:var(--fxs);color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
 h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .sub{font-size:var(--fbase);color:var(--t2);margin-bottom:1.75rem}
-.themetoggle{width:32px;height:32px;border-radius:50%;border:.5px solid var(--bdm);background:var(--bg);color:var(--t2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.themetoggle:hover{background:var(--s2)}
+.themetoggle{width:32px;height:32px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.themetoggle:hover{opacity:.75}
+.themetoggle svg{width:18px;height:18px;display:block}
 .banner{background:var(--s2);border:.5px solid var(--bd);border-radius:var(--radl);padding:10px 14px;margin-bottom:.9rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:var(--fbase);color:var(--t2)}
 .banner strong{color:var(--t)}
 .bacts{display:flex;gap:6px;flex-wrap:wrap}
@@ -72,11 +73,11 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .topicon.spin{cursor:default;color:var(--t);animation:topiconspin .8s linear infinite}
 @keyframes topiconspin{to{transform:rotate(360deg)}}
 .drivemenu-wrap{position:relative;display:inline-flex}
-.drivemenu{position:absolute;top:22px;right:0;min-width:210px;background:var(--surface);border:.5px solid var(--bdm);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px 0;z-index:50;text-align:left;cursor:default}
-.drivemenu-email{padding:2px 12px 8px;font-size:var(--fsm);color:var(--t2);border-bottom:.5px solid var(--bd);margin-bottom:4px;word-break:break-all}
+.drivemenu{position:absolute;top:22px;right:0;min-width:210px;background:var(--tabdashbg);border:.5px solid var(--tabdashbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px 0;z-index:50;text-align:left;cursor:default}
+.drivemenu-email{padding:2px 12px 8px;font-size:var(--fsm);color:var(--t2);border-bottom:.5px solid var(--tabdashbd);margin-bottom:4px;word-break:break-all}
 .drivemenu-row{display:block;width:100%;text-align:left;padding:7px 12px;background:none;border:none;font-size:var(--fbase);color:var(--t);cursor:pointer;font-family:var(--sans)}
-.drivemenu-row:hover{background:var(--s2)}
-.drivemenu-synced{padding:6px 12px 2px;font-size:var(--fxs);color:var(--t3);text-align:right;border-top:.5px solid var(--bd);margin-top:4px}
+.drivemenu-row:hover{background:var(--tabdashbd)}
+.drivemenu-synced{padding:6px 12px 2px;font-size:var(--fxs);color:var(--t3);text-align:right;border-top:.5px solid var(--tabdashbd);margin-top:4px;font-style:italic}
 /* Period bar */
 .periodbar{display:flex;flex-direction:column;margin-bottom:1.5rem}
 .pbtop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -300,9 +301,23 @@ textarea:focus{border-color:var(--t3)}
 /* Breakeven pill (result === 0, neither win nor loss) */
 .pbe{background:var(--s2);color:var(--t2);border:.5px solid var(--bd)}
 /* Trade log filter bar */
-.logfilterbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:.75rem}
-.logfilterbar select{padding:6px 10px;font-size:var(--fsm);font-family:var(--sans);border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t);cursor:pointer}
-.logfilterbar select:focus{border-color:var(--t3);outline:none}
+.logfilterbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:.75rem}
+.filterbtn{padding:5px 10px;font-size:var(--fsm);font-family:var(--sans);border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t2);cursor:pointer;white-space:nowrap}
+.filterbtn:hover{color:var(--t)}
+.filterbtn.on{color:var(--tablr);background:var(--tablrbg);border-color:var(--tablrbd)}
+.filterdd-wrap{position:relative;display:inline-flex}
+.filterdd{position:absolute;top:30px;left:0;min-width:140px;background:var(--tablrbg);border:.5px solid var(--tablrbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;z-index:50;text-align:left;cursor:default}
+.filterdd-row{display:block;width:100%;text-align:left;padding:6px 12px;background:none;border:none;font-size:var(--fsm);color:var(--t);cursor:pointer;font-family:var(--sans)}
+.filterdd-row:hover{background:var(--tablrbd)}
+.filterclear{height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
+.filterclear:hover{color:var(--t)}
+.filterclear svg{width:14px;height:14px;display:block}
+.logbaricons{display:inline-flex;align-items:center;gap:9px;margin-left:auto}
+.searchwrap{display:inline-flex;align-items:center}
+.searchpill{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:3px 7px;border:.5px solid var(--tabdashbd);background:var(--tabdashbg);color:var(--tabdash)}
+.searchpill svg{width:14px;height:14px;flex-shrink:0}
+.searchpill input{background:none;border:none;outline:none;font-family:var(--sans);font-size:var(--fbase);color:var(--t);width:130px}
+.searchpill input::placeholder{color:var(--t3)}
 /* Sortable table headers */
 thead th.sortable{cursor:pointer;user-select:none;transition:color .15s}
 thead th.sortable:hover{color:var(--t)}
@@ -412,6 +427,9 @@ let trades=[],reflections=[],dq=DQ_DEFAULT.map(d=>({...d})),tab="dashboard",show
 let periodMode="week",periodAnchor=new Date(),customFrom="",customTo="";
 let logSort={col:"date",dir:"desc"};
 let logFilters={ticker:"",setup:"",wl:"",process:"",lossCat:""};
+let logFilterOpen=null;   // which filter's dropdown is open: 'ticker'|'setup'|'wl'|'process'|'lossCat'|null
+let logSearchOpen=false;  // search field expanded/collapsed
+let logSearchQuery="";    // free-text search over the trade log
 let resultManual=false;
 let fillSeq=1;
 
@@ -504,6 +522,11 @@ const ICON_DOC=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const ICON_NOEDIT=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>`;
 const ICON_CLOCK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>`;
 const ICON_WARN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3Z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>`;
+const ICON_SUN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+const ICON_MOON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+const ICON_SEARCH=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+const ICON_PLUS=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+const ICON_X=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 // item 4 — shared "DD MMM YY, HH:MM" (24hr) formatter for last-synced timestamps,
 // used in the connected-account dropdown here and (matching format, for consistency)
 // in viewer.html's last-synced text.
@@ -551,7 +574,7 @@ function closeDriveMenu(){
   driveMenuOpen=false;
   renderDriveStatus();
 }
-document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();});
+document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(logFilterOpen)closeLogFilterDropdown();});
 async function driveFetchUserEmail(){
   try{
     const res=await driveApiFetch("https://www.googleapis.com/oauth2/v3/userinfo");
@@ -2023,8 +2046,9 @@ function expSummaryHTML(includeStats){
   --refhead:#E0AFC2;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t);padding:2rem 1.25rem 4rem;font-size:13px}
-.themetoggle{width:32px;height:32px;border-radius:50%;border:.5px solid var(--bdm);background:var(--bg);color:var(--t2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.themetoggle:hover{background:var(--s2)}
+.themetoggle{width:32px;height:32px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.themetoggle:hover{opacity:.75}
+.themetoggle svg{width:18px;height:18px;display:block}
 .wrap{max-width:1152px;margin:0 auto}
 h1{font-size:22px;font-weight:600;margin-bottom:4px}
 .sub{font-size:13px;color:var(--t2);margin-bottom:1.75rem}
@@ -2104,9 +2128,6 @@ h1{font-size:22px;font-weight:600;margin-bottom:4px}
 .btn:hover{background:var(--surface)}
 .lbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px}
 .lcount{font-size:var(--fbase);color:var(--t2)}
-.logfilterbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:.75rem}
-.logfilterbar select{padding:6px 10px;font-size:var(--fsm);font-family:var(--sans);border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t);cursor:pointer}
-.logfilterbar select:focus{border-color:var(--t3);outline:none}
 .twrap{overflow-x:auto;border:.5px solid var(--bd);border-radius:var(--radl)}
 table{width:100%;border-collapse:collapse;font-size:var(--fsm)}
 thead tr{background:var(--s2);border-bottom:.5px solid var(--bd)}
@@ -2157,7 +2178,7 @@ details.statsdetails[open]>summary:before{content:"▾ "}
     <h1>J. — Trading Journal Summary</h1>
     <p class="sub">${periodLabel} · generated ${genDate}</p>
   </div>
-  <button class="themetoggle" id="exp-theme-btn" onclick="expToggleTheme()" title="toggle theme">🌙</button>
+  <button class="themetoggle" id="exp-theme-btn" onclick="expToggleTheme()" title="toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
 </div>
 ${includeStats?`<details class="statsdetails" id="stats-details">
 <summary class="seclab" style="margin:0 0 10px">stats</summary>
@@ -2191,13 +2212,15 @@ ${reflectionCards||`<div class="empty2">no reflections in this period</div>`}
 </div>
 <div class="lbox" id="lbox" onclick="closeLB()"><img id="lbox-img" src=""/></div>
 <${""}script>
+var EXP_SUN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+var EXP_MOON_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 function expToggleTheme(){
   var cur=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
   document.documentElement.setAttribute("data-theme",cur);
   try{localStorage.setItem("wss_theme",cur);}catch(e){}
-  var b=document.getElementById("exp-theme-btn");if(b)b.textContent=cur==="dark"?"☀️":"🌙";
+  var b=document.getElementById("exp-theme-btn");if(b)b.innerHTML=cur==="dark"?EXP_SUN_SVG:EXP_MOON_SVG;
 }
-(function(){var b=document.getElementById("exp-theme-btn");if(b)b.textContent=document.documentElement.getAttribute("data-theme")==="dark"?"☀️":"🌙";})();
+(function(){var b=document.getElementById("exp-theme-btn");if(b)b.innerHTML=document.documentElement.getAttribute("data-theme")==="dark"?EXP_SUN_SVG:EXP_MOON_SVG;})();
 var EQ_POINTS=${eqPointsJSON};
 var EQ_TRADE_COUNT=${eqTradeCount};
 function openLB(src){document.getElementById("lbox-img").src=src;document.getElementById("lbox").classList.add("show");}
@@ -2733,7 +2756,7 @@ function render(){
       <span class="iconsep">|</span>
       <button class="topicon" onclick="openExportOptions()" title="share summary (.html)">${ICON_DOWN}${ICON_DOC}</button>
     </div>
-    <button class="themetoggle" onclick="toggleTheme()" title="toggle theme">${isDark?"☀️":"🌙"}</button>
+    <button class="themetoggle" onclick="toggleTheme()" title="toggle theme">${isDark?ICON_SUN:ICON_MOON}</button>
   </div>
 </div>
 ${driveStaleConflict?`<div class="banner" style="border-color:var(--abd);background:var(--abg)">
@@ -2833,6 +2856,57 @@ function hasLogFilters(){return Object.values(logFilters).some(v=>v);}
 function uniqueTickersUsed(){
   return Array.from(new Set(trades.map(t=>t.ticker.toUpperCase()))).sort();
 }
+// item 1 (follow-up) — button-style filter dropdowns replacing native <select>s.
+function toggleLogFilterDropdown(key,ev){
+  if(ev)ev.stopPropagation();
+  logFilterOpen=logFilterOpen===key?null:key;
+  render();
+}
+function pickLogFilter(key,val,ev){
+  if(ev)ev.stopPropagation();
+  logFilters[key]=val;
+  logFilterOpen=null;
+  render();
+}
+function closeLogFilterDropdown(){if(logFilterOpen){logFilterOpen=null;render();}}
+function renderFilterBtn(key,allLabel,opts){
+  const cur=logFilters[key];
+  const match=opts.find(o=>o.val===cur);
+  const curLabel=cur?(match?match.label:cur):allLabel;
+  const open=logFilterOpen===key;
+  return`<div class="filterdd-wrap">
+    <button class="filterbtn${(cur||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" title="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
+    ${open?`<div class="filterdd" onclick="event.stopPropagation()">
+      <button class="filterdd-row" onclick="pickLogFilter('${key}','',event)">${allLabel}</button>
+      ${opts.map(o=>`<button class="filterdd-row" onclick="pickLogFilter('${key}','${o.val}',event)">${esc(o.label)}</button>`).join("")}
+    </div>`:""}
+  </div>`;
+}
+// item 1 (follow-up) — search icon/field toggle + live search-as-you-type.
+function toggleLogSearch(ev){
+  if(ev)ev.stopPropagation();
+  logSearchOpen=!logSearchOpen;
+  if(!logSearchOpen)logSearchQuery="";
+  render();
+  if(logSearchOpen){
+    requestAnimationFrame(()=>{const el=document.getElementById("logsearch-input");if(el)el.focus();});
+  }
+}
+function onLogSearchInput(el){
+  logSearchQuery=el.value;
+  const pos=el.selectionStart;
+  render();
+  requestAnimationFrame(()=>{
+    const ni=document.getElementById("logsearch-input");
+    if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
+  });
+}
+function logSearchMatch(t){
+  const q=logSearchQuery.trim().toLowerCase();
+  if(!q)return true;
+  const hay=[t.ticker,t.setup,t.wl,t.direction,dispDate(t.date)].filter(Boolean).join(" ").toLowerCase();
+  return hay.includes(q);
+}
 function applyLogFilters(list){
   return list.filter(t=>{
     if(logFilters.ticker&&t.ticker.toUpperCase()!==logFilters.ticker)return false;
@@ -2844,6 +2918,7 @@ function applyLogFilters(list){
       if(logFilters.process==="bad"&&t.isGood)return false;
     }
     if(logFilters.lossCat&&t.lossCat!==logFilters.lossCat)return false;
+    if(!logSearchMatch(t))return false;
     return true;
   });
 }
@@ -2898,34 +2973,23 @@ function logH(en){
   return`<div>
 <div class="lbar">
   <span class="lcount">${logList.length} trade${logList.length!==1?"s":""} shown${(periodMode!=="all"||filtersOn)?` (of ${trades.length} total)`:""}</span>
-  <button class="btn" onclick="tog()">${showForm?"cancel":"+ add trade"}</button>
 </div>
 
 ${trades.length>0?`<div class="logfilterbar">
-  <select onchange="setLogFilter('ticker',this.value)" title="filter by ticker">
-    <option value=""${logFilters.ticker===""?" selected":""}>All tickers</option>
-    ${uniqueTickersUsed().map(tk=>`<option value="${tk}"${logFilters.ticker===tk?" selected":""}>${tk}</option>`).join("")}
-  </select>
-  <select onchange="setLogFilter('setup',this.value)" title="filter by setup">
-    <option value=""${logFilters.setup===""?" selected":""}>All setups</option>
-    ${SETUPS.map(s=>`<option value="${s}"${logFilters.setup===s?" selected":""}>${s}</option>`).join("")}
-  </select>
-  <select onchange="setLogFilter('wl',this.value)" title="filter by win/loss">
-    <option value=""${logFilters.wl===""?" selected":""}>All W/L</option>
-    <option value="Win"${logFilters.wl==="Win"?" selected":""}>Win</option>
-    <option value="Loss"${logFilters.wl==="Loss"?" selected":""}>Loss</option>
-    <option value="BE"${logFilters.wl==="BE"?" selected":""}>Breakeven</option>
-  </select>
-  <select onchange="setLogFilter('process',this.value)" title="filter by process grade">
-    <option value=""${logFilters.process===""?" selected":""}>All process</option>
-    <option value="good"${logFilters.process==="good"?" selected":""}>Good</option>
-    <option value="bad"${logFilters.process==="bad"?" selected":""}>Bad</option>
-  </select>
-  <select onchange="setLogFilter('lossCat',this.value)" title="filter by loss category">
-    <option value=""${logFilters.lossCat===""?" selected":""}>All loss types</option>
-    ${LOSSCATS.map(c=>`<option value="${c.id}"${logFilters.lossCat===c.id?" selected":""}>${c.label}</option>`).join("")}
-  </select>
-  ${filtersOn?`<button class="btn" onclick="clearLogFilters()">clear filters</button>`:""}
+  ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})))}
+  ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})))}
+  ${renderFilterBtn("wl","all W/L",[{val:"Win",label:"Win"},{val:"Loss",label:"Loss"},{val:"BE",label:"Breakeven"}])}
+  ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}])}
+  ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})))}
+  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" title="clear filters">${ICON_X}</button>`:""}
+  <div class="logbaricons">
+    <span class="searchwrap">
+      ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="search trades..." value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)"/></span><button class="topicon" onclick="toggleLogSearch(event)" title="close search">${ICON_X}</button>`
+      :`<button class="topicon" onclick="toggleLogSearch(event)" title="search trades">${ICON_SEARCH}</button>`}
+    </span>
+    <span class="iconsep">|</span>
+    <button class="topicon" onclick="tog()" title="${showForm?"cancel":"add trade"}">${showForm?ICON_X:ICON_PLUS}</button>
+  </div>
 </div>`:""}
 
 ${showForm?`
