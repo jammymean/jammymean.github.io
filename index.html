@@ -4,10 +4,12 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>trading journal</title>
-<!-- Favicon follows the BROWSER/OS's prefers-color-scheme, not the in-app manual theme toggle (favicons can't read page JS state) -->
-<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23A15B78'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'><circle%20cx='12'%20cy='12'%20r='9'/><path%20d='M10%208.3%20L16%2012%20L10%2015.7%20Z'%20fill='%23A15B78'%20stroke='%23A15B78'%20stroke-linejoin='round'/></svg>" media="(prefers-color-scheme: light)"/>
-<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23E0AFC2'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'><circle%20cx='12'%20cy='12'%20r='9'/><path%20d='M10%208.3%20L16%2012%20L10%2015.7%20Z'%20fill='%23E0AFC2'%20stroke='%23E0AFC2'%20stroke-linejoin='round'/></svg>" media="(prefers-color-scheme: dark)"/>
-<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23E0AFC2'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'><circle%20cx='12'%20cy='12'%20r='9'/><path%20d='M10%208.3%20L16%2012%20L10%2015.7%20Z'%20fill='%23E0AFC2'%20stroke='%23E0AFC2'%20stroke-linejoin='round'/></svg>"/>
+<!-- Favicon: hand-drawn / sketchy replica of the play-button reference icon.
+     Follows the BROWSER/OS's prefers-color-scheme, not the in-app manual theme toggle
+     (favicons can't read page JS state) — mauve (#A15B78) on light, powder pink (#E0AFC2) on dark. -->
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23A15B78'%20stroke-linecap='round'%20stroke-linejoin='round'><path%20d='M12.1%202.6%20C16.9%202.4%2021.3%206.1%2021.4%2011.6%20C21.5%2016.9%2017.5%2021%2012.3%2021.4%20C7.4%2021.7%202.9%2017.8%202.6%2012.6%20C2.4%207.6%206.9%203%2012.1%202.6%20Z'%20stroke-width='1.4'%20opacity='0.55'/><path%20d='M12%203%20C16.8%202.9%2020.9%206.7%2021%2012%20C21.1%2017%2017.2%2020.9%2012.1%2021%20C7.3%2021.1%203%2017.3%203%2012%20C3%207.2%207.3%203.3%2012%203%20Z'%20stroke-width='1.6'/><path%20d='M9.9%207.6%20L16.6%2011.7%20L10.1%2016.5%20Z'%20fill='%23A15B78'%20fill-opacity='0.92'%20stroke-width='1.3'/></svg>" media="(prefers-color-scheme: light)"/>
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23E0AFC2'%20stroke-linecap='round'%20stroke-linejoin='round'><path%20d='M12.1%202.6%20C16.9%202.4%2021.3%206.1%2021.4%2011.6%20C21.5%2016.9%2017.5%2021%2012.3%2021.4%20C7.4%2021.7%202.9%2017.8%202.6%2012.6%20C2.4%207.6%206.9%203%2012.1%202.6%20Z'%20stroke-width='1.4'%20opacity='0.55'/><path%20d='M12%203%20C16.8%202.9%2020.9%206.7%2021%2012%20C21.1%2017%2017.2%2020.9%2012.1%2021%20C7.3%2021.1%203%2017.3%203%2012%20C3%207.2%207.3%203.3%2012%203%20Z'%20stroke-width='1.6'/><path%20d='M9.9%207.6%20L16.6%2011.7%20L10.1%2016.5%20Z'%20fill='%23E0AFC2'%20fill-opacity='0.92'%20stroke-width='1.3'/></svg>" media="(prefers-color-scheme: dark)"/>
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23E0AFC2'%20stroke-linecap='round'%20stroke-linejoin='round'><path%20d='M12.1%202.6%20C16.9%202.4%2021.3%206.1%2021.4%2011.6%20C21.5%2016.9%2017.5%2021%2012.3%2021.4%20C7.4%2021.7%202.9%2017.8%202.6%2012.6%20C2.4%207.6%206.9%203%2012.1%202.6%20Z'%20stroke-width='1.4'%20opacity='0.55'/><path%20d='M12%203%20C16.8%202.9%2020.9%206.7%2021%2012%20C21.1%2017%2017.2%2020.9%2012.1%2021%20C7.3%2021.1%203%2017.3%203%2012%20C3%207.2%207.3%203.3%2012%203%20Z'%20stroke-width='1.6'/><path%20d='M9.9%207.6%20L16.6%2011.7%20L10.1%2016.5%20Z'%20fill='%23E0AFC2'%20fill-opacity='0.92'%20stroke-width='1.3'/></svg>"/>
 <script>(function(){try{var t=localStorage.getItem("wss_theme")||"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();</script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
@@ -259,11 +261,9 @@ td{padding:10px;vertical-align:middle;white-space:nowrap}
 .browpct{font-size:var(--fsm);font-weight:700;font-family:var(--mono);text-align:right;white-space:nowrap}
 /* Pipe separator for compact multi-value stat cards, e.g. "3 | 2W | 1L" */
 .statsep{color:var(--t3);margin:0 7px;font-weight:400}
-.setuprow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem}
-.setupcard{flex:1;min-width:90px;background:var(--surface);border:.5px solid var(--bd);border-radius:var(--rad);padding:10px 12px;display:flex;flex-direction:column;justify-content:center}
-.setupname{font-size:var(--fbase);font-weight:600;margin-bottom:3px}
-.setuptrades{font-size:var(--fxs);color:var(--t2);margin-bottom:3px}
-.setupwr{font-size:var(--fmd);font-family:var(--mono);font-weight:700}
+.setuprow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:stretch}
+.setupcard{flex:1;min-width:90px;background:var(--s2);border-radius:var(--rad);padding:10px 14px;min-height:76px;display:flex;flex-direction:column}
+.setupcard.streakcard{justify-content:flex-start}
 .refcard{background:var(--s2);border:.5px solid var(--bd);border-radius:var(--radl);padding:1.1rem}
 .refq{font-size:var(--fbase);font-weight:600;margin-bottom:6px}
 textarea{width:100%;font-family:var(--sans);font-size:var(--fbase);padding:9px 11px;border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t);resize:vertical;line-height:1.6;outline:none;margin-bottom:12px}
@@ -345,6 +345,7 @@ textarea:focus{border-color:var(--t3)}
 .searchpill svg{width:14px;height:14px;flex-shrink:0}
 .searchpill input{background:none;border:none;outline:none;font-family:var(--sans);font-size:var(--fbase);color:var(--t);width:130px}
 .searchpill input::placeholder{color:var(--t3)}
+.hlmark{background:var(--tabdashbg);color:var(--tabdash);border-radius:3px;padding:0 2px;font-weight:700}
 /* Sortable table headers */
 thead th.sortable{cursor:pointer;user-select:none;transition:color .15s}
 thead th.sortable:hover{color:var(--t)}
@@ -452,7 +453,7 @@ function sortedTickers(){
 }
 function tickerInfo(symbol){return TICKERS.find(t=>t.symbol===symbol)||null;}
 
-let trades=[],reflections=[],dq=DQ_DEFAULT.map(d=>({...d})),tab="dashboard",showForm=false,editingDq=false,editingId=null,showRefForm=false,expandedId=null;
+let trades=[],reflections=[],dq=DQ_DEFAULT.map(d=>({...d})),tab="dashboard",showForm=false,editingDq=false,editingId=null,showRefForm=false,expandedIds=new Set();
 let periodMode="week",periodAnchor=new Date(),customFrom="",customTo="";
 let logSort={col:"date",dir:"desc"};
 let logFilters={ticker:[],setup:[],wl:[],process:[],lossCat:[]}; // each value is an array — multi-select
@@ -561,6 +562,9 @@ const ICON_MOON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const ICON_SEARCH=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 const ICON_PLUS=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
 const ICON_X=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+const ICON_TRIRIGHT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M9 6l9 6-9 6V6z"/></svg>`;
+const ICON_TRIDOWN=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6 9l6 9 6-9H6z"/></svg>`;
+const ICON_FILTER=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 4 20 4 14 12.5 14 19 10 21 10 12.5 4 4"/></svg>`;
 // item 4 — shared "DD MMM YY, HH:MM" (24hr) formatter for last-synced timestamps,
 // used in the connected-account dropdown here and (matching format, for consistency)
 // in viewer.html's last-synced text.
@@ -1173,6 +1177,10 @@ function exportFileName(ext){
 }
 function setPeriod(mode){
   periodMode=mode;
+  // Calendar defaults to hidden in month view (it's a lot of cells) — still
+  // freely togglable afterward, but each fresh switch into month re-hides it.
+  if(mode==="month")calendarCollapsed=true;
+  else if(mode==="week")calendarCollapsed=false;
   if(mode==="custom"&&!customFrom){
     const s=startOfMonth(new Date()),e=endOfMonth(new Date());
     customFrom=ymd(s);customTo=ymd(e);
@@ -1611,6 +1619,16 @@ function sbg(v){return v===null?"var(--s2)":v>=.8?"var(--gbg)":v>=.5?"var(--abg)
 function sbd(v){return v===null?"var(--bd)":v>=.8?"var(--gbd)":v>=.5?"var(--abd)":"var(--rbd)"}
 function esc(s){return (s||"").replace(/</g,"&lt;");}
 function escAttr(s){return (s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+function reEsc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
+// Wraps case-insensitive matches of `q` inside `s` (already/about-to-be escaped for HTML)
+// in <mark>. Escapes `s` itself first, so callers should pass raw text, not pre-escaped text.
+function hl(s,q){
+  const raw=esc(s||"");
+  const query=(q||"").trim();
+  if(!query)return raw;
+  const re=new RegExp(reEsc(esc(query)),"ig");
+  return raw.replace(re,m=>`<mark class="hlmark">${m}</mark>`);
+}
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 function addTrade(){
@@ -1651,7 +1669,7 @@ function addTrade(){
   form=blank();showForm=false;save();render();
 }
 
-function del(id){if(!confirm("Delete this trade? This can't be undone."))return;trades=trades.filter(t=>t.id!==id);if(expandedId===id)expandedId=null;save();render();}
+function del(id){if(!confirm("Delete this trade? This can't be undone."))return;trades=trades.filter(t=>t.id!==id);expandedIds.delete(id);save();render();}
 function setTab(t){tab=t;render();}
 function tog(){
   if(showForm)editingId=null;
@@ -1677,7 +1695,16 @@ function editTrade(id){
   render();
 }
 function toggleExpand(id){
-  expandedId=expandedId===id?null:id;
+  if(expandedIds.has(id))expandedIds.delete(id);else expandedIds.add(id);
+  render();
+}
+// Master expand/collapse-all toggle for the trade log — expands every currently
+// visible (filtered/sorted) row if any are collapsed, otherwise collapses all.
+function toggleExpandAll(){
+  const list=applyLogSort(applyLogFilters(getFilteredTrades()));
+  const allOpen=list.length>0&&list.every(t=>expandedIds.has(t.id));
+  if(allOpen)expandedIds.clear();
+  else list.forEach(t=>expandedIds.add(t.id));
   render();
 }
 
@@ -1750,9 +1777,9 @@ function reflectionRange(r){
   return{start:s,end:e};
 }
 function nonEmptySections(r){return r.sections.filter(s=>(s.q&&s.q.trim())||(s.a&&s.a.trim()));}
-function pWrap(s){
+function pWrap(s,q){
   const lines=(s||"").split("\n");
-  return lines.map((l,i)=>`<div${i<lines.length-1?' style="margin-bottom:10px"':""}>${esc(l)||"&nbsp;"}</div>`).join("");
+  return lines.map((l,i)=>`<div${i<lines.length-1?' style="margin-bottom:10px"':""}>${(q?hl(l,q):esc(l))||"&nbsp;"}</div>`).join("");
 }
 function getFilteredReflections(){
   const r=periodRange();
@@ -2883,7 +2910,7 @@ function expandRowH(t){
         return `<span><strong>Entry (${addIdx})</strong> $${f2(parseFloat(f.price))}${f.contracts?` · ${f.contracts} ct`:""}</span><span><strong>Stop</strong> ${stopV}</span><span><strong>Target</strong> ${targetV}</span>`;
       }).join("");
     })()}</div>`:""}
-    ${t.comments&&t.comments.trim()?`<div class="expsub">comments</div><div class="expcomment">${esc(t.comments)}</div>`:""}
+    ${t.comments&&t.comments.trim()?`<div class="expsub">comments</div><div class="expcomment">${hl(t.comments,logSearchQuery)}</div>`:""}
     <div class="expcols" style="margin-top:18px">
       <div>
         <div class="expsub">rules checklist</div>
@@ -3105,6 +3132,7 @@ function applyLogSort(list){
 }
 function logH(en){
   const logList=applyLogSort(applyLogFilters(en));
+  const allExpanded=logList.length>0&&logList.every(t=>expandedIds.has(t.id));
   const filtersOn=hasLogFilters();
   const filteredOut=(periodMode!=="all"||filtersOn)&&trades.length>0&&logList.length===0;
   const LOG_HEADERS=[
@@ -3133,6 +3161,8 @@ function logH(en){
   return`<div>
 <div class="logfilterbar">
   ${trades.length>0?`
+  <button class="topicon" onclick="toggleExpandAll()" title="${allExpanded?"collapse all":"expand all"}" data-tt="${allExpanded?"collapse all":"expand all"}">${allExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
+  <span class="topicon" style="cursor:default" title="filters" data-tt="filters">${ICON_FILTER}</span>
   ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})),en)}
   <span class="iconsep">|</span>
   ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})),en)}
@@ -3231,10 +3261,10 @@ ${logList.map(t=>{
   const col=sc(t.rs),bg=sbg(t.rs),bd=sbd(t.rs);
   const sl=t.rs!==null?`${t.fc}/${t.ac}`:"—";
   const row=`<tr class="trow" onclick="toggleExpand(${t.id})">
-<td class="chev">${expandedId===t.id?"▾":"▸"}</td>
-<td style="font-size:var(--fsm);color:var(--t2)">${dispDate(t.date)}</td>
-<td style="font-weight:700;font-size:var(--fbase)">${t.ticker.toUpperCase()}</td>
-<td><span class="pill pneu">${t.setup}</span></td>
+<td class="chev">${expandedIds.has(t.id)?"▾":"▸"}</td>
+<td style="font-size:var(--fsm);color:var(--t2)">${hl(dispDate(t.date),logSearchQuery)}</td>
+<td style="font-weight:700;font-size:var(--fbase)">${hl(t.ticker.toUpperCase(),logSearchQuery)}</td>
+<td><span class="pill pneu">${hl(t.setup,logSearchQuery)}</span></td>
 <td style="text-align:center">${t.contracts||"—"}</td>
 <td>$${f2(t.entry)}</td>
 <td style="color:var(--r)">$${f2(t.stop)}</td>
@@ -3247,7 +3277,7 @@ ${logList.map(t=>{
 <td><button class="delbtn" onclick="event.stopPropagation();editTrade(${t.id})" title="edit trade">✎</button></td>
 <td><button class="delbtn" onclick="event.stopPropagation();del(${t.id})" title="delete trade">×</button></td>
 </tr>`;
-  return row+(expandedId===t.id?expandRowH(t):"");
+  return row+(expandedIds.has(t.id)?expandRowH(t):"");
 }).join("")}
 </tbody></table></div>`}
 ${trades.length>0?`<div class="lcountbottom">${logList.length} of ${trades.length} trades shown</div>`:""}
@@ -3272,7 +3302,7 @@ function statGridH(s,title,ec,bc,em){
   const worstCol=s.worstDay?(s.worstDay.net<0?"var(--r)":"var(--a)"):"var(--t3)";
   const edgeSub=s.edge===null?"no data yet":s.edge>0?"positive edge ↑":"negative edge ↓";
   const row1=[
-    statCard(title,cu(s.net),netColor,{hero:true}),
+    statCard(title,cu(s.net),netColor),
     statCard("Trading Days",`${s.tradingDays}D ${SEP} <span style="color:var(--g)">${s.greenDays}G</span> ${SEP} <span style="color:var(--r)">${s.redDays}R</span>`,null),
     statCard("Trades",`${s.n} ${SEP} <span style="color:var(--g)">${s.wc}W</span> ${SEP} <span style="color:var(--r)">${s.lc}L</span>`,null),
   ];
@@ -3284,7 +3314,7 @@ function statGridH(s,title,ec,bc,em){
   const row3=[
     statCard("Avg Win / Loss",`<span style="color:var(--g)">${s.aw!==null?cu(s.aw):"—"}</span> ${SEP} <span style="color:var(--r)">${s.al!==null?cu(-s.al):"—"}</span>`,null),
     statCard("Avg RR Plan / Realized",`${s.ar!==null?`${f2(s.ar)}:1`:"—"} ${SEP} ${s.arReal!==null?`${f2(s.arReal)}:1`:"—"}`,null),
-    statCard("Rule Execution",s.ep!==null?pc(s.ep):"—",bc,{bar:s.ep!==null?(s.ep*100).toFixed(1):0,sub:em,subColor:bc}),
+    statCard("Rule Execution",s.ep!==null?pc(s.ep):"—",bc,{sub:em,subColor:bc}),
   ];
   return`<div class="statrow3">${row1.join("")}</div>
 <div class="statrow3">${row2.join("")}</div>
@@ -3299,6 +3329,7 @@ function dashH(s,en,ec,bc,em){
   return`<div>
 ${calendarH(en,{collapsible:true,collapsed:calendarCollapsed,label:"calendar"})}
 
+<p class="seclab">stats</p>
 <div class="dashSplit">
   <div id="dash-stat-col">${statGridH(s,periodTitle,ec,bc,em)}</div>
   <div class="bpanel eq-panel-auto" id="dash-eq-panel" style="margin-bottom:0">
@@ -3367,11 +3398,11 @@ ${en.length>0?`
 ${SETUPS.map(setup=>{
   const ts=en.filter(t=>t.setup===setup),ws=ts.filter(t=>t.wl==="Win"),ls=ts.filter(t=>t.wl==="Loss"),wr=(ws.length+ls.length)>0?ws.length/(ws.length+ls.length):null;
   const c=wr===null?"var(--t3)":wr>=.5?"var(--g)":"var(--r)";
-  return`<div class="setupcard"><div class="setupname">${setup}</div><div class="setuptrades">${ts.length} trade${ts.length!==1?"s":""}</div><div class="setupwr" style="color:${c}">${wr!==null?pc(wr):"—"}</div></div>`;
+  return`<div class="setupcard"><div class="slabel">${setup}</div><div class="pbody"><div class="sval" style="color:${c}">${wr!==null?pc(wr):"—"}</div><div class="svalsub">${ts.length} trade${ts.length!==1?"s":""}</div></div></div>`;
 }).join("")}
-<div class="setupcard"><div class="setupname">Avg Hold Time</div><div class="setupwr" style="color:var(--t);margin-top:auto">${s.adur!==null?fdur(s.adur):"—"}</div></div>
-<div class="setupcard">
-  <div class="setupname" style="margin-bottom:6px">Streak</div>
+<div class="setupcard"><div class="slabel">Avg Hold Time</div><div class="pbody"><div class="sval">${s.adur!==null?fdur(s.adur):"—"}</div></div></div>
+<div class="setupcard streakcard">
+  <div class="slabel" style="margin-bottom:6px">Streak</div>
   <div class="rsrow" style="padding:4px 0"><span class="rsname">Current</span><span class="rspct" style="color:${curCol}">${curLbl}</span></div>
   <div class="rsrow" style="padding:4px 0"><span class="rsname">Max Win</span><span class="rspct" style="color:var(--g)">${st.maxWin||"—"}</span></div>
   <div class="rsrow" style="padding:4px 0;border-bottom:none"><span class="rsname">Max Loss</span><span class="rspct" style="color:var(--r)">${st.maxLoss||"—"}</span></div>
@@ -3423,7 +3454,7 @@ ${showRefForm?`
     <button class="pbtn${refForm.periodType==="week"?" on":""}" onclick="setRefPeriodType('week')">weekly</button>
     <button class="pbtn${refForm.periodType==="month"?" on":""}" onclick="setRefPeriodType('month')">monthly</button>
   </div>
-  <div class="fgrid" style="max-width:460px;margin-bottom:8px">
+  <div class="fgrid" style="max-width:460px;margin-bottom:20px">
     ${refForm.periodType==="week"
       ?`<div class="field"><label>week containing</label><input id="rf-weekdate" type="date" value="${refForm.periodDate}" onchange="updateRefPeriodDate()"/></div>`
       :`<div class="field"><label>month</label><input id="rf-monthdate" type="month" value="${refForm.periodDate.slice(0,7)}" onchange="updateRefPeriodDate()"/></div>`}
@@ -3455,9 +3486,9 @@ ${reflections.length===0
     return `
 <div class="fcard" style="margin-bottom:10px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:18px">
-    <span style="font-size:var(--fsm);color:var(--refhead);font-weight:700;letter-spacing:.03em">${refHeaderLabel(r)}</span>
+    <span style="font-size:var(--fsm);color:var(--refhead);font-weight:700;letter-spacing:.03em">${hl(refHeaderLabel(r),refSearchQuery)}</span>
     <div style="display:flex;align-items:center;gap:12px">
-      <span style="font-size:var(--fxs);color:var(--t3);font-style:italic">entry date: ${ddmmyy(parseYMD(r.entryDate))}</span>
+      <span style="font-size:var(--fxs);color:var(--t3);font-style:italic">entry date: ${hl(ddmmyy(parseYMD(r.entryDate)),refSearchQuery)}</span>
       <div style="display:flex;gap:2px">
         <button class="delbtn" onclick="editReflection(${r.id})" title="edit reflection">✎</button>
         <button class="delbtn" onclick="delReflection(${r.id})" title="delete reflection">×</button>
@@ -3465,8 +3496,8 @@ ${reflections.length===0
     </div>
   </div>
   ${secs.map((s,i)=>`<div style="${i<secs.length-1?"margin-bottom:14px;padding-bottom:14px;border-bottom:.5px solid var(--bd)":""}">
-    <div class="refq" style="margin-bottom:6px">${esc(s.q)}</div>
-    <div style="font-size:var(--fbase);color:var(--t2);line-height:1.5">${pWrap(s.a)}</div>
+    <div class="refq" style="margin-bottom:6px">${hl(s.q,refSearchQuery)}</div>
+    <div style="font-size:var(--fbase);color:var(--t2);line-height:1.5">${pWrap(s.a,refSearchQuery)}</div>
   </div>`).join("")}
 </div>`;
   }).join("")}
