@@ -15,7 +15,7 @@
   --g:#4E9269;--gbg:rgba(78,146,105,0.12);--gbd:rgba(78,146,105,0.32);
   --r:#C97878;--rbg:rgba(201,120,120,0.12);--rbd:rgba(201,120,120,0.32);
   --a:#BD9142;--abg:rgba(189,145,66,0.14);--abd:rgba(189,145,66,0.34);
-  --p:#8377C9;--pbg:rgba(131,119,201,0.14);--pbd:rgba(131,119,201,0.34);
+  --p:#A47DAB;--pbg:rgba(164,125,171,0.14);--pbd:rgba(164,125,171,0.34);
   --refhead:#7C9EB8;
   --tabdash:#A15B78;--tabdashbg:rgba(161,91,120,0.12);--tabdashbd:rgba(161,91,120,0.32);
   --tablr:#4F7691;--tablrbg:rgba(79,118,145,0.12);--tablrbd:rgba(79,118,145,0.32);
@@ -40,7 +40,7 @@
   --g:#7FCBA0;--gbg:rgba(127,203,160,0.14);--gbd:rgba(127,203,160,0.34);
   --r:#E69A9A;--rbg:rgba(230,154,154,0.14);--rbd:rgba(230,154,154,0.34);
   --a:#E4BD7D;--abg:rgba(228,189,125,0.15);--abd:rgba(228,189,125,0.35);
-  --p:#B4ABE8;--pbg:rgba(180,171,232,0.15);--pbd:rgba(180,171,232,0.35);
+  --p:#EDC8FF;--pbg:rgba(237,200,255,0.15);--pbd:rgba(237,200,255,0.35);
   --refhead:#E0AFC2;
   --tabdash:#A9C6DE;--tabdashbg:rgba(169,198,222,0.15);--tabdashbd:rgba(169,198,222,0.35);
   --tablr:#E0AFC2;--tablrbg:rgba(224,175,194,0.15);--tablrbd:rgba(224,175,194,0.35);
@@ -71,14 +71,15 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .storagebar{font-size:var(--fxs);color:var(--t3)}
 /* Period bar */
 .periodbar{display:flex;flex-direction:column;margin-bottom:1.5rem}
-.pbtop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pbrow{display:flex;align-items:center;justify-content:center;position:relative;padding:2px 0}
+.pbcenter{display:flex;align-items:center;flex-wrap:wrap;justify-content:center}
 .pbmodes{display:flex;align-items:center;gap:7px}
 .pbtn{padding:3px 9px;border-radius:calc(var(--rad) - 1px);font-size:var(--fsm);font-weight:300;font-family:var(--sans);cursor:pointer;border:.5px solid transparent;color:var(--t2);background:transparent;transition:all .15s}
 .pbtn.on{background:var(--pbg);color:var(--p);border-color:var(--pbd);font-weight:600}
 .pbtn:hover:not(.on){color:var(--t)}
 .pbsep{font-size:var(--fsm);color:var(--t3);user-select:none}
-.pbcount{font-size:var(--fxs);font-weight:300;color:var(--t3)}
-.pbnav{display:flex;align-items:center;gap:5px;margin-top:5px;margin-left:9px;font-size:var(--fxs);font-weight:300;color:var(--t3)}
+.pbcount{position:absolute;right:0;font-size:var(--fxs);font-weight:300;color:var(--t3)}
+.pbnav{display:flex;align-items:center;gap:5px;margin-left:9px;font-size:var(--fxs);font-weight:300;color:var(--t3)}
 .pbarrow{color:var(--t3);cursor:pointer;transition:color .15s;line-height:1;padding:0 2px;margin-right:2px}
 .pbarrow:hover{color:var(--t)}
 .pblabel{font-size:var(--fxs);font-weight:300;color:var(--t3);margin-right:6px}
@@ -151,6 +152,7 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 /* Table */
 .lbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px}
 .lcount{font-size:var(--fbase);color:var(--t2)}
+.lcountbottom{text-align:right;font-size:var(--fxs);font-weight:300;font-style:italic;color:var(--t3);margin-top:8px}
 .empty{text-align:center;padding:3.5rem 1rem;border:.5px solid var(--bd);border-radius:var(--radl);color:var(--t2);font-size:var(--fbase)}
 .twrap{overflow-x:auto;border:.5px solid var(--bd);border-radius:var(--radl)}
 table{width:100%;border-collapse:collapse;font-size:var(--fsm)}
@@ -293,13 +295,15 @@ textarea:focus{border-color:var(--t3)}
 .pbe{background:var(--s2);color:var(--t2);border:.5px solid var(--bd)}
 /* Trade log filter bar */
 .logfilterbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:.75rem}
-.filterbtn{padding:5px 10px;font-size:var(--fsm);font-family:var(--sans);border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t2);cursor:pointer;white-space:nowrap}
+.filterbtn{padding:5px 10px;font-size:var(--fsm);font-family:var(--sans);border:.5px solid transparent;border-radius:var(--rad);background:none;color:var(--t2);cursor:pointer;white-space:nowrap}
 .filterbtn:hover{color:var(--t)}
 .filterbtn.on{color:var(--tablr);background:var(--tablrbg);border-color:var(--tablrbd)}
 .filterdd-wrap{position:relative;display:inline-flex}
 .filterdd{position:absolute;top:30px;left:0;min-width:140px;background:var(--tablrbg);border:.5px solid var(--tablrbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;z-index:50;text-align:left;cursor:default}
 .filterdd-row{display:block;width:100%;text-align:left;padding:6px 12px;background:none;border:none;font-size:var(--fsm);color:var(--t);cursor:pointer;font-family:var(--sans)}
 .filterdd-row:hover{background:var(--tablrbd)}
+.filterdd-check{display:flex;align-items:center;gap:8px;cursor:pointer}
+.filterdd-check input{cursor:pointer;accent-color:var(--tablr)}
 .filterclear{height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
 .filterclear:hover{color:var(--t)}
 .filterclear svg{width:14px;height:14px;display:block}
@@ -335,6 +339,7 @@ const ICON_SUN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const ICON_MOON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
 const ICON_SEARCH=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 const ICON_X=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+const ICON_PLUS=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
 const RULES=[
   {id:"stop", text:"Respected my stop loss"},
   {id:"fomo", text:"Entered on conviction, not FOMO"},
@@ -393,10 +398,12 @@ function tickerInfo(symbol){return TICKERS.find(t=>t.symbol===symbol)||null;}
 let trades=[],reflections=[],dq=DQ_DEFAULT.map(d=>({...d})),tab="dashboard",showForm=false,editingDq=false,editingId=null,showRefForm=false,expandedId=null;
 let periodMode="week",periodAnchor=new Date(),customFrom="",customTo="";
 let logSort={col:"date",dir:"desc"};
-let logFilters={ticker:"",setup:"",wl:"",process:"",lossCat:""};
+let logFilters={ticker:[],setup:[],wl:[],process:[],lossCat:[]}; // each value is an array — multi-select
 let logFilterOpen=null;   // which filter's dropdown is open: 'ticker'|'setup'|'wl'|'process'|'lossCat'|null
 let logSearchOpen=false;  // search field expanded/collapsed
 let logSearchQuery="";    // free-text search over the trade log
+let refSearchOpen=false;  // search field expanded/collapsed (reflections)
+let refSearchQuery="";    // free-text search over reflections
 let resultManual=false;
 let fillSeq=1;
 
@@ -2097,25 +2104,27 @@ ${violCount>0
 function periodBarH(filteredCount,totalCount){
   const r=periodRange();
   return`<div class="periodbar">
-  <div class="pbtop">
-    <div class="pbmodes">
-      <button class="pbtn${periodMode==="all"?" on":""}" onclick="setPeriod('all')">All</button>
-      <span class="pbsep">|</span>
-      <button class="pbtn${periodMode==="week"?" on":""}" onclick="setPeriod('week')">Week</button>
-      <span class="pbsep">|</span>
-      <button class="pbtn${periodMode==="month"?" on":""}" onclick="setPeriod('month')">Month</button>
-      <span class="pbsep">|</span>
-      <button class="pbtn${periodMode==="custom"?" on":""}" onclick="setPeriod('custom')">Custom</button>
+  <div class="pbrow">
+    <div class="pbcenter">
+      <div class="pbmodes">
+        <button class="pbtn${periodMode==="all"?" on":""}" onclick="setPeriod('all')">All</button>
+        <span class="pbsep">|</span>
+        <button class="pbtn${periodMode==="week"?" on":""}" onclick="setPeriod('week')">Week</button>
+        <span class="pbsep">|</span>
+        <button class="pbtn${periodMode==="month"?" on":""}" onclick="setPeriod('month')">Month</button>
+        <span class="pbsep">|</span>
+        <button class="pbtn${periodMode==="custom"?" on":""}" onclick="setPeriod('custom')">Custom</button>
+      </div>
+      ${(periodMode==="week"||periodMode==="month")?`
+      <div class="pbnav">
+        <span class="pbarrow" onclick="shiftPeriod(-1)">‹</span>
+        <span class="pblabel">${r?r.label:""}</span>
+        <span class="pbarrow" onclick="shiftPeriod(1)">›</span>
+        ${!isCurrentPeriod()?`<button class="pbtoday" onclick="jumpToday()">${periodMode==="week"?"this week":"this month"}</button>`:""}
+      </div>`:""}
     </div>
-    <span class="pbcount">${filteredCount} of ${totalCount} trade${totalCount!==1?"s":""}${periodMode!=="all"?" in view":""}</span>
+    ${tab!=="reflection"?`<span class="pbcount">${filteredCount} of ${totalCount} trade${totalCount!==1?"s":""}${periodMode!=="all"?" in view":""}</span>`:""}
   </div>
-  ${(periodMode==="week"||periodMode==="month")?`
-  <div class="pbnav">
-    <span class="pbarrow" onclick="shiftPeriod(-1)">‹</span>
-    <span class="pblabel">${r?r.label:""}</span>
-    <span class="pbarrow" onclick="shiftPeriod(1)">›</span>
-    ${!isCurrentPeriod()?`<button class="pbtoday" onclick="jumpToday()">${periodMode==="week"?"this week":"this month"}</button>`:""}
-  </div>`:""}
   ${periodMode==="custom"?`
   <div class="pbcustom">
     <input type="date" id="pb-from" value="${customFrom}" onchange="setCustomRange()"/>
@@ -2179,7 +2188,7 @@ function render(){
   <div>
     <p class="brand">J.</p>
     <h1>trading journal<span class="robadge" title="read-only">${ICON_NOEDIT}</span></h1>
-    <p class="sub" style="margin-bottom:0"><strong>${trades.length}</strong> trades · <span style="font-weight:300;font-size:var(--fsm);font-style:italic">last synced: ${fmtSyncTime(driveModifiedTime)}</span></p>
+    <p class="sub" style="margin-bottom:0"><span style="font-weight:300;font-size:var(--fsm);font-style:italic">last synced: ${fmtSyncTime(driveModifiedTime)}</span></p>
   </div>
   <div class="topbaracts">
     <div class="bacts bacts-slim">
@@ -2274,8 +2283,8 @@ function setLogSort(col){
   render();
 }
 function setLogFilter(key,val){logFilters[key]=val;render();}
-function clearLogFilters(){logFilters={ticker:"",setup:"",wl:"",process:"",lossCat:""};render();}
-function hasLogFilters(){return Object.values(logFilters).some(v=>v);}
+function clearLogFilters(){logFilters={ticker:[],setup:[],wl:[],process:[],lossCat:[]};render();}
+function hasLogFilters(){return Object.values(logFilters).some(v=>v.length>0);}
 function uniqueTickersUsed(){
   return Array.from(new Set(trades.map(t=>t.ticker.toUpperCase()))).sort();
 }
@@ -2284,24 +2293,38 @@ function toggleLogFilterDropdown(key,ev){
   logFilterOpen=logFilterOpen===key?null:key;
   render();
 }
-function pickLogFilter(key,val,ev){
+function toggleLogFilterValue(key,val,ev){
+  // Multi-select: toggles one value in the array and keeps the dropdown open
+  // so several options can be picked in one go — it only closes on outside click.
   if(ev)ev.stopPropagation();
-  logFilters[key]=val;
-  logFilterOpen=null;
+  const cur=logFilters[key];
+  const i=cur.indexOf(val);
+  if(i===-1)cur.push(val);else cur.splice(i,1);
+  render();
+}
+function clearOneLogFilter(key,ev){
+  if(ev)ev.stopPropagation();
+  logFilters[key]=[];
   render();
 }
 function closeLogFilterDropdown(){if(logFilterOpen){logFilterOpen=null;render();}}
-document.addEventListener("click",()=>{if(logFilterOpen)closeLogFilterDropdown();});
+document.addEventListener("click",()=>{if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen)closeLogSearch();if(refSearchOpen)closeRefSearch();});
 function renderFilterBtn(key,allLabel,opts){
   const cur=logFilters[key];
-  const match=opts.find(o=>o.val===cur);
-  const curLabel=cur?(match?match.label:cur):allLabel;
   const open=logFilterOpen===key;
+  let curLabel=allLabel;
+  if(cur.length===1){
+    const match=opts.find(o=>o.val===cur[0]);
+    curLabel=match?match.label:cur[0];
+  }else if(cur.length>1){
+    const match=opts.find(o=>o.val===cur[0]);
+    curLabel=`${match?match.label:cur[0]} +${cur.length-1}`;
+  }
   return`<div class="filterdd-wrap">
-    <button class="filterbtn${(cur||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" title="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
+    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" title="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
     ${open?`<div class="filterdd" onclick="event.stopPropagation()">
-      <button class="filterdd-row" onclick="pickLogFilter('${key}','',event)">${allLabel}</button>
-      ${opts.map(o=>`<button class="filterdd-row" onclick="pickLogFilter('${key}','${o.val}',event)">${esc(o.label)}</button>`).join("")}
+      <button class="filterdd-row" onclick="clearOneLogFilter('${key}',event)">${allLabel}</button>
+      ${opts.map(o=>`<label class="filterdd-row filterdd-check"><input type="checkbox" ${cur.includes(o.val)?"checked":""} onchange="toggleLogFilterValue('${key}','${o.val}',event)"/>${esc(o.label)}</label>`).join("")}
     </div>`:""}
   </div>`;
 }
@@ -2314,6 +2337,11 @@ function toggleLogSearch(ev){
     requestAnimationFrame(()=>{const el=document.getElementById("logsearch-input");if(el)el.focus();});
   }
 }
+function closeLogSearch(){
+  if(!logSearchOpen)return;
+  logSearchOpen=false;logSearchQuery="";
+  render();
+}
 function onLogSearchInput(el){
   logSearchQuery=el.value;
   const pos=el.selectionStart;
@@ -2324,22 +2352,26 @@ function onLogSearchInput(el){
   });
 }
 function logSearchMatch(t){
+  // Matches everything in a trade, not just the columns visible in the collapsed
+  // row — comments/notes only show once a row is expanded, but search still
+  // needs to find them without the user opening every row first.
   const q=logSearchQuery.trim().toLowerCase();
   if(!q)return true;
-  const hay=[t.ticker,t.setup,t.wl,t.direction,dispDate(t.date)].filter(Boolean).join(" ").toLowerCase();
+  const lc=t.lossCat?LOSSCATS.find(c=>c.id===t.lossCat):null;
+  const hay=[t.ticker,t.setup,t.wl,t.direction,dispDate(t.date),t.comments,lc?lc.label:""].filter(Boolean).join(" ").toLowerCase();
   return hay.includes(q);
 }
 function applyLogFilters(list){
   return list.filter(t=>{
-    if(logFilters.ticker&&t.ticker.toUpperCase()!==logFilters.ticker)return false;
-    if(logFilters.setup&&t.setup!==logFilters.setup)return false;
-    if(logFilters.wl&&t.wl!==logFilters.wl)return false;
-    if(logFilters.process){
+    if(logFilters.ticker.length&&!logFilters.ticker.includes(t.ticker.toUpperCase()))return false;
+    if(logFilters.setup.length&&!logFilters.setup.includes(t.setup))return false;
+    if(logFilters.wl.length&&!logFilters.wl.includes(t.wl))return false;
+    if(logFilters.process.length){
       if(t.isGood===null)return false;
-      if(logFilters.process==="good"&&!t.isGood)return false;
-      if(logFilters.process==="bad"&&t.isGood)return false;
+      const procVal=t.isGood?"good":"bad";
+      if(!logFilters.process.includes(procVal))return false;
     }
-    if(logFilters.lossCat&&t.lossCat!==logFilters.lossCat)return false;
+    if(logFilters.lossCat.length&&!logFilters.lossCat.includes(t.lossCat))return false;
     if(!logSearchMatch(t))return false;
     return true;
   });
@@ -2393,23 +2425,24 @@ function logH(en){
     return`<th class="sortable${active?" sorted":""}" onclick="setLogSort('${h.key}')" title="sort by ${h.label}">${h.label}${arrow}</th>`;
   }).join("");
   return`<div>
-<div class="lbar">
-  <span class="lcount">${logList.length} trade${logList.length!==1?"s":""} shown${(periodMode!=="all"||filtersOn)?` (of ${trades.length} total)`:""}</span>
-  <button class="btn" data-edit="1" onclick="tog()">${showForm?"cancel":"+ add trade"}</button>
-</div>
-
 ${trades.length>0?`<div class="logfilterbar">
   ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})))}
+  <span class="iconsep">|</span>
   ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})))}
+  <span class="iconsep">|</span>
   ${renderFilterBtn("wl","all W/L",[{val:"Win",label:"Win"},{val:"Loss",label:"Loss"},{val:"BE",label:"Breakeven"}])}
+  <span class="iconsep">|</span>
   ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}])}
+  <span class="iconsep">|</span>
   ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})))}
   ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" title="clear filters">${ICON_X}</button>`:""}
   <div class="logbaricons">
     <span class="searchwrap">
-      ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="search trades..." value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)"/></span><button class="topicon" onclick="toggleLogSearch(event)" title="close search">${ICON_X}</button>`
+      ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="search trades..." value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)"/></span>`
       :`<button class="topicon" onclick="toggleLogSearch(event)" title="search trades">${ICON_SEARCH}</button>`}
     </span>
+    <span class="iconsep" data-edit="1">|</span>
+    <button class="topicon" data-edit="1" onclick="tog()" title="${showForm?"cancel":"add trade"}">${showForm?ICON_X:ICON_PLUS}</button>
   </div>
 </div>`:""}
 
@@ -2509,6 +2542,7 @@ ${logList.map(t=>{
   return row+(expandedId===t.id?expandRowH(t):"");
 }).join("")}
 </tbody></table></div>`}
+${trades.length>0?`<div class="lcountbottom">${logList.length} of ${trades.length} trades shown</div>`:""}
 </div>`;
 }
 
