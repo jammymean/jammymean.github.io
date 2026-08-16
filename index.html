@@ -82,7 +82,7 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .topicon svg{width:16px;height:16px;display:block;flex-shrink:0}
 .topicon.ok{color:var(--tabdash);background:var(--tabdashbg);border:.5px solid var(--tabdashbd);border-radius:6px;padding:2px 6px;height:auto;line-height:1}
 .topicon.ok:hover{color:var(--tabdash);opacity:.82}
-.topicon.err{color:var(--r);cursor:default}
+.topicon.err{color:var(--r)}
 .topicon.err:hover{color:var(--r)}
 .topicon.warn{color:var(--a)}
 .topicon.warn:hover{color:var(--a)}
@@ -95,8 +95,9 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .drivemenu-wrap{position:relative;display:inline-flex}
 .drivemenu{position:absolute;top:22px;right:0;min-width:210px;background:var(--tabdashbg-dd);border:.5px solid var(--tabdashbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px 0;z-index:50;text-align:left;cursor:default}
 .drivemenu-email{padding:2px 12px 8px;font-size:var(--fsm);color:var(--t2);border-bottom:.5px solid var(--tabdashbd);margin-bottom:4px;word-break:break-all}
-.drivemenu-row{display:block;width:100%;text-align:left;padding:7px 12px;background:none;border:none;font-size:var(--fbase);color:var(--t);cursor:pointer;font-family:var(--sans)}
+.drivemenu-row{display:flex;align-items:center;gap:6px;width:100%;text-align:left;padding:7px 12px;background:none;border:none;font-size:var(--fbase);color:var(--t);cursor:pointer;font-family:var(--sans)}
 .drivemenu-row:hover{background:var(--tabdashbd)}
+.drivemenu-row svg{width:14px;height:14px;flex-shrink:0;display:block}
 .drivemenu-synced{padding:6px 12px 2px;font-size:var(--fxs);color:var(--t3);text-align:right;border-top:.5px solid var(--tabdashbd);margin-top:4px;font-style:italic}
 /* Period bar */
 .periodbar{display:flex;flex-direction:column;margin-bottom:1.5rem}
@@ -225,6 +226,8 @@ td{padding:10px;vertical-align:middle;white-space:nowrap}
 .svalbar{width:100%;height:5px;background:var(--surface);border:.5px solid var(--bd);border-radius:3px;overflow:hidden;margin-bottom:6px}
 .svalbarfill{height:100%;border-radius:3px;transition:width .3s}
 .pbody{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;width:100%}
+.setuprow .pbody .sval{flex:0 1 auto}
+.setuprow .svalsub{margin-top:1px}
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:1.25rem}
 .row2col{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:1.25rem}
 .row2colEq{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem}
@@ -431,7 +434,6 @@ let driveAbortController=null;    // manual hard-stop — the in-flight request'
 let driveForceStopped=false;      // set right before aborting so the resulting fetch rejection doesn't surface as a scary error
 let driveWatchdogTimer=null;      // safety net — auto force-stops a connect/sync that never resolves (e.g. a silently-blocked
                                    // Google prompt:"none" request), instead of spinning forever with no way out
-let driveSyncMenuOpen=false;      // dropdown shown when clicking the spinner mid-connect/sync — force stop + last synced
 const DRIVE_AUTO_BACKUP_KEY="wss_drive_last_backup"; // item 7
 const DRIVE_BACKUP_INTERVAL_DAYS=7;
 const DRIVE_BACKUP_PRUNE_DAYS=60;
@@ -465,6 +467,7 @@ let logFilterOpen=null;   // which filter's dropdown is open: 'ticker'|'setup'|'
 let logSearchOpen=false;  // search field expanded/collapsed
 let logSearchQuery="";    // free-text search over the trade log
 let logSearchLocked=false;// true after Enter — search stays open through outside clicks until Esc
+let logSearchNavIndex=-1; // index of the currently-focused match, for prev/next navigation; -1 = none focused yet
 let refSearchOpen=false;  // search field expanded/collapsed (reflections)
 let refSearchQuery="";    // free-text search over reflections
 let refSearchLocked=false;// true after Enter — search stays open through outside clicks until Esc
@@ -567,6 +570,7 @@ const ICON_SEARCH=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const ICON_PLUS=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
 const ICON_X=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 const ICON_TRIRIGHT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M9 6l9 6-9 6V6z"/></svg>`;
+const ICON_TRILEFT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M15 6l-9 6 9 6V6z"/></svg>`;
 const ICON_TRIDOWN=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6 9l6 9 6-9H6z"/></svg>`;
 const ICON_FILTER=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 4 20 4 14 12.5 14 19 10 21 10 12.5 4 4"/></svg>`;
 // item 4 — shared "DD MMM YY, HH:MM" (24hr) formatter for last-synced timestamps,
@@ -600,34 +604,45 @@ function driveStartWatchdog(){
     driveAbortController=null;
     clearDriveRetry();
     driveConnecting=false;driveSyncing=false;driveSaveInFlight=false;driveSaveQueued=false;
-    drivePendingSync=false;driveStaleConflict=false;driveSyncMenuOpen=false;
+    drivePendingSync=false;driveStaleConflict=false;driveMenuOpen=false;
     driveSyncError="connection timed out — click connect to try again";
     render();
   },20000);
 }
+// item 6 — every non-"never connected" state (connecting/syncing, error, offline,
+// connected) opens this same fixed dropdown: email, switch account, disconnect,
+// force stop, last synced. Previously error/offline had no click target at all,
+// and connecting/syncing showed a stripped-down version — now they all behave
+// the same way, so there's always a way out no matter what state it's stuck in.
 function driveStatusHtml(){
   if(driveConnecting||driveSyncing)return`<span class="drivemenu-wrap">
-    <button class="topicon spin" onclick="toggleDriveSyncMenu(event)" title="${driveConnecting?"connecting…":"syncing…"} — click for options" data-tt="${driveConnecting?"connecting…":"syncing…"} (click for options)"><span class="spin-ico">${DRIVE_SPIN_SVG}</span></button>
-    ${driveSyncMenuOpen?driveSyncMenuHtml():""}
+    <button class="topicon spin" onclick="toggleDriveMenu(event)" title="${driveConnecting?"connecting…":"syncing…"} — click for options" data-tt="${driveConnecting?"connecting…":"syncing…"} (click for options)"><span class="spin-ico">${DRIVE_SPIN_SVG}</span></button>
+    ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
   if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" title="newer changes were saved from another device — click to reload them" data-tt="newer changes saved elsewhere — click to reload">${ICON_WARN}</button>`;
-  if(drivePendingSync)return`<span class="topicon warn" title="offline — your changes are saved locally and will sync automatically once you're back online" data-tt="offline — will sync automatically">${ICON_CLOCK}</span>`;
-  if(driveSyncError)return`<span class="topicon err" title="${escAttr(driveSyncError)}" data-tt="${escAttr(driveSyncError)}">${DRIVE_ERR_SVG}</span>`;
-  // item 6 — connected: the checkmark is now a dropdown trigger (account info,
-  // switch account, disconnect, last synced) instead of an immediate disconnect.
+  if(drivePendingSync)return`<span class="drivemenu-wrap">
+    <button class="topicon warn" onclick="toggleDriveMenu(event)" title="offline — your changes are saved locally and will sync automatically once you're back online — click for options" data-tt="offline — will sync automatically (click for options)">${ICON_CLOCK}</button>
+    ${driveMenuOpen?driveMenuHtml():""}
+  </span>`;
+  if(driveSyncError)return`<span class="drivemenu-wrap">
+    <button class="topicon err" onclick="toggleDriveMenu(event)" title="${escAttr(driveSyncError)} — click for options" data-tt="${escAttr(driveSyncError)} (click for options)">${DRIVE_ERR_SVG}</button>
+    ${driveMenuOpen?driveMenuHtml():""}
+  </span>`;
   if(driveConnected)return`<span class="drivemenu-wrap">
     <button class="topicon ok" onclick="toggleDriveMenu(event)" title="connected to Google Drive — click for account options" data-tt="connected — click for account options">${ICON_CHECK}</button>
     ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
   return`<button class="topicon" onclick="connectDrive()" title="connect Google Drive" data-tt="connect Google Drive">${ICON_LINK}</button>`;
 }
-// item 6 — the connected-account dropdown itself: email (only shown here, never
-// at rest on the topbar), switch account, disconnect, and last synced (item 4).
+// item 6 — the one fixed dropdown shared by every state above: email (only
+// shown here, never at rest on the topbar), switch account, disconnect, force
+// stop (red), and last synced.
 function driveMenuHtml(){
   return`<div class="drivemenu" onclick="event.stopPropagation()">
     <div class="drivemenu-email">${driveUserEmail?esc(driveUserEmail):"…"}</div>
     <button class="drivemenu-row" onclick="switchDriveAccount()">switch account</button>
     <button class="drivemenu-row" onclick="disconnectDrive()">disconnect</button>
+    <button class="drivemenu-row" style="color:var(--r)" onclick="driveForceStop()">${ICON_X} force stop</button>
     <div class="drivemenu-synced">last synced: ${fmtSyncTime(driveKnownModifiedTime)}</div>
   </div>`;
 }
@@ -641,29 +656,10 @@ function closeDriveMenu(){
   driveMenuOpen=false;
   renderDriveStatus();
 }
-// Dropdown shown while connecting/syncing (behind the spinner) — same shape as
-// the connected-account menu, so force stop is available and last-synced is
-// still checkable without having to blindly abort first just to see it.
-function driveSyncMenuHtml(){
-  return`<div class="drivemenu" onclick="event.stopPropagation()">
-    <button class="drivemenu-row" style="color:var(--r)" onclick="driveForceStop()">${ICON_X} force stop</button>
-    <div class="drivemenu-synced">last synced: ${fmtSyncTime(driveKnownModifiedTime)}</div>
-  </div>`;
-}
-function toggleDriveSyncMenu(ev){
-  if(ev)ev.stopPropagation();
-  driveSyncMenuOpen=!driveSyncMenuOpen;
-  renderDriveStatus();
-}
-function closeDriveSyncMenu(){
-  if(!driveSyncMenuOpen)return;
-  driveSyncMenuOpen=false;
-  renderDriveStatus();
-}
-document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(driveSyncMenuOpen)closeDriveSyncMenu();if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen&&!logSearchLocked)closeLogSearch();if(refSearchOpen&&!refSearchLocked)closeRefSearch();});
+document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen&&!logSearchLocked)closeLogSearch();if(refSearchOpen&&!refSearchLocked)closeRefSearch();});
 // Global Escape fallback — closes an open search even when focus has moved off the
 // input (e.g. a locked search, which intentionally survives outside clicks).
-document.addEventListener("keydown",(ev)=>{if(ev.key==="Escape"){if(logSearchOpen)closeLogSearch();if(refSearchOpen)closeRefSearch();if(driveSyncMenuOpen)closeDriveSyncMenu();}});
+document.addEventListener("keydown",(ev)=>{if(ev.key==="Escape"){if(logSearchOpen)closeLogSearch();if(refSearchOpen)closeRefSearch();if(driveMenuOpen)closeDriveMenu();}});
 async function driveFetchUserEmail(){
   try{
     const res=await driveApiFetch("https://www.googleapis.com/oauth2/v3/userinfo");
@@ -723,6 +719,7 @@ async function attemptDriveAutoConnect(){
   if(stillValid){
     driveAccessToken=cached.token;
     driveTokenExpiresAt=cached.expiresAt; // item 9 — reusing the cache, not calling cacheDriveToken(), so set this explicitly
+    driveForceStopped=false; // see connectDrive() — must clear before a fresh attempt or the callback silently no-ops
     driveConnecting=true;renderDriveStatus();
     driveSyncError="";
     driveStartWatchdog();
@@ -739,6 +736,7 @@ async function attemptDriveAutoConnect(){
   // same as if the person had simply never connected.
   const tc=ensureDriveTokenClient();
   if(!tc)return;
+  driveForceStopped=false; // see connectDrive() — must clear before a fresh attempt or the callback silently no-ops
   driveConnecting=true;renderDriveStatus();
   driveStartWatchdog(); // this prompt:"none" call can be silently swallowed by the
                          // browser (blocked third-party cookies, etc.) and never
@@ -804,6 +802,7 @@ function connectDrive(){
     alert("Google sign-in is still loading — wait a second and click Connect again.");
     return;
   }
+  driveForceStopped=false; // clear any stale force-stop from a previous attempt, or this new attempt's callback will silently no-op forever
   driveConnecting=true;driveSyncError="";renderDriveStatus();
   tc.callback=async(resp)=>{
     if(driveForceStopped)return;
@@ -831,6 +830,7 @@ function switchDriveAccount(){
     alert("Google sign-in is still loading — wait a second and try again.");
     return;
   }
+  driveForceStopped=false; // see connectDrive() — must clear before a fresh attempt or the callback silently no-ops
   driveConnecting=true;driveSyncError="";driveUserEmail=null;renderDriveStatus();
   tc.callback=async(resp)=>{
     if(driveForceStopped)return;
@@ -878,7 +878,7 @@ function driveForceStop(){
   clearDriveRetry();
   if(driveRefreshTimer){clearTimeout(driveRefreshTimer);driveRefreshTimer=null;}
   driveConnecting=false;driveSyncing=false;driveSaveInFlight=false;driveSaveQueued=false;
-  drivePendingSync=false;driveStaleConflict=false;driveSyncError="";driveMenuOpen=false;driveSyncMenuOpen=false;
+  drivePendingSync=false;driveStaleConflict=false;driveSyncError="";driveMenuOpen=false;
   render();
 }
 async function driveApiFetch(url,options){
@@ -1753,12 +1753,12 @@ function toggleExpand(id){
   if(expandedIds.has(id))expandedIds.delete(id);else expandedIds.add(id);
   render();
 }
-// Master expand/collapse-all toggle for the trade log — expands every currently
-// visible (filtered/sorted) row if any are collapsed, otherwise collapses all.
+// Master expand/collapse-all toggle for the trade log — collapses everything if
+// any currently visible (filtered/sorted) row is open, otherwise expands all.
 function toggleExpandAll(){
   const list=applyLogSort(applyLogFilters(getFilteredTrades()));
-  const allOpen=list.length>0&&list.every(t=>expandedIds.has(t.id));
-  if(allOpen)expandedIds.clear();
+  const anyOpen=list.some(t=>expandedIds.has(t.id));
+  if(anyOpen)expandedIds.clear();
   else list.forEach(t=>expandedIds.add(t.id));
   render();
 }
@@ -3079,6 +3079,7 @@ function toggleLogSearch(ev){
   if(ev)ev.stopPropagation();
   logSearchOpen=!logSearchOpen;
   logSearchLocked=false;
+  logSearchNavIndex=-1;
   if(!logSearchOpen)logSearchQuery="";
   render();
   if(logSearchOpen){
@@ -3087,11 +3088,12 @@ function toggleLogSearch(ev){
 }
 function closeLogSearch(){
   if(!logSearchOpen)return;
-  logSearchOpen=false;logSearchQuery="";logSearchLocked=false;
+  logSearchOpen=false;logSearchQuery="";logSearchLocked=false;logSearchNavIndex=-1;
   render();
 }
 function onLogSearchInput(el){
   logSearchQuery=el.value;
+  logSearchNavIndex=-1;
   const pos=el.selectionStart;
   render();
   requestAnimationFrame(()=>{
@@ -3102,6 +3104,25 @@ function onLogSearchInput(el){
 function onLogSearchKeydown(ev){
   if(ev.key==="Enter"){ev.preventDefault();logSearchLocked=true;}
   else if(ev.key==="Escape"){ev.preventDefault();closeLogSearch();}
+}
+function currentLogSearchMatches(){
+  if(!logSearchQuery.trim())return[];
+  return applyLogSort(applyLogFilters(getFilteredTrades()));
+}
+function logSearchNav(dir,ev){
+  if(ev)ev.stopPropagation();
+  const list=currentLogSearchMatches();
+  if(!list.length)return;
+  if(logSearchNavIndex<0)logSearchNavIndex=dir>0?0:list.length-1;
+  else logSearchNavIndex=(logSearchNavIndex+dir+list.length)%list.length;
+  const t=list[logSearchNavIndex];
+  if(!t)return;
+  expandedIds.add(t.id); // reveal fields (e.g. comments) that only show once expanded
+  render();
+  requestAnimationFrame(()=>{
+    const el=document.getElementById(`traderow-${t.id}`);
+    if(el)el.scrollIntoView({behavior:"smooth",block:"center"});
+  });
 }
 function toggleRefSearch(ev){
   if(ev)ev.stopPropagation();
@@ -3187,7 +3208,7 @@ function applyLogSort(list){
 }
 function logH(en){
   const logList=applyLogSort(applyLogFilters(en));
-  const allExpanded=logList.length>0&&logList.every(t=>expandedIds.has(t.id));
+  const anyExpanded=logList.some(t=>expandedIds.has(t.id));
   const filtersOn=hasLogFilters();
   const filteredOut=(periodMode!=="all"||filtersOn)&&trades.length>0&&logList.length===0;
   const LOG_HEADERS=[
@@ -3216,7 +3237,7 @@ function logH(en){
   return`<div>
 <div class="logfilterbar">
   ${trades.length>0?`
-  <button class="topicon" onclick="toggleExpandAll()" title="${allExpanded?"collapse all":"expand all"}" data-tt="${allExpanded?"collapse all":"expand all"}">${allExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
+  <button class="topicon" onclick="toggleExpandAll()" title="${anyExpanded?"collapse all":"expand all"}" data-tt="${anyExpanded?"collapse all":"expand all"}">${anyExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
   <span class="topicon" style="cursor:default;margin-right:-4px" title="filters" data-tt="filters">${ICON_FILTER}</span>
   ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})),en)}
   <span class="iconsep">|</span>
@@ -3231,6 +3252,10 @@ function logH(en){
   `:""}
   <div class="logbaricons">
     <span class="searchwrap">
+      ${logSearchOpen&&currentLogSearchMatches().length>0?`
+      <button class="topicon" onclick="logSearchNav(-1,event)" title="previous match" data-tt="previous match">${ICON_TRILEFT}</button>
+      <button class="topicon" onclick="logSearchNav(1,event)" title="next match" data-tt="next match">${ICON_TRIRIGHT}</button>
+      `:""}
       ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="" value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)" onkeydown="onLogSearchKeydown(event)"/></span>`
       :`<button class="topicon" onclick="toggleLogSearch(event)" title="search trades" data-tt="search trades">${ICON_SEARCH}</button>`}
     </span>
@@ -3315,7 +3340,7 @@ ${logList.map(t=>{
   const rc=t.wl==="Win"?"var(--g)":t.wl==="Loss"?"var(--r)":"var(--t)";
   const col=sc(t.rs),bg=sbg(t.rs),bd=sbd(t.rs);
   const sl=t.rs!==null?`${t.fc}/${t.ac}`:"—";
-  const row=`<tr class="trow" onclick="toggleExpand(${t.id})">
+  const row=`<tr class="trow" id="traderow-${t.id}" onclick="toggleExpand(${t.id})">
 <td class="chev">${expandedIds.has(t.id)?"▾":"▸"}</td>
 <td style="font-size:var(--fsm);color:var(--t2)">${hl(dispDate(t.date),logSearchQuery)}</td>
 <td style="font-weight:700;font-size:var(--fbase)">${hl(t.ticker.toUpperCase(),logSearchQuery)}</td>
@@ -3448,10 +3473,7 @@ ${s.dqStats.filter(d=>d.total>0).map(d=>`<div class="rsrow"><span class="rsname"
 </div>
 
 ${en.length>0?`
-<p class="seclab" style="display:flex;justify-content:space-between;align-items:center">
-  <span>setup breakdown</span>
-  <span class="slabel" style="margin-bottom:0">streak</span>
-</p>
+<p class="seclab">setup breakdown</p>
 <div class="setuprow">
 ${SETUPS.map(setup=>{
   const ts=en.filter(t=>t.setup===setup),ws=ts.filter(t=>t.wl==="Win"),ls=ts.filter(t=>t.wl==="Loss"),wr=(ws.length+ls.length)>0?ws.length/(ws.length+ls.length):null;
@@ -3460,6 +3482,7 @@ ${SETUPS.map(setup=>{
 }).join("")}
 <div class="setupcard"><div class="slabel">Avg Hold Time</div><div class="pbody"><div class="sval">${s.adur!==null?fdur(s.adur):"—"}</div></div></div>
 <div class="setupcard streakcard">
+  <div class="slabel">streak</div>
   <div class="rsrow" style="padding:4px 0"><span class="rsname">Current</span><span class="rspct" style="color:${curCol}">${curLbl}</span></div>
   <div class="rsrow" style="padding:4px 0"><span class="rsname">Max Win</span><span class="rspct" style="color:var(--g)">${st.maxWin||"—"}</span></div>
   <div class="rsrow" style="padding:4px 0;border-bottom:none"><span class="rsname">Max Loss</span><span class="rspct" style="color:var(--r)">${st.maxLoss||"—"}</span></div>
