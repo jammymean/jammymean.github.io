@@ -16,7 +16,7 @@
   --g:#4E9269;--gbg:rgba(78,146,105,0.12);--gbd:rgba(78,146,105,0.32);
   --r:#C97878;--rbg:rgba(201,120,120,0.12);--rbd:rgba(201,120,120,0.32);
   --a:#BD9142;--abg:rgba(189,145,66,0.14);--abd:rgba(189,145,66,0.34);
-  --p:#8377C9;--pbg:rgba(131,119,201,0.14);--pbd:rgba(131,119,201,0.34);
+  --p:#A47DAB;--pbg:rgba(164,125,171,0.14);--pbd:rgba(164,125,171,0.34);
   --refhead:#7C9EB8;
   --tabdash:#A15B78;--tabdashbg:rgba(161,91,120,0.12);--tabdashbd:rgba(161,91,120,0.32);
   --tablr:#4F7691;--tablrbg:rgba(79,118,145,0.12);--tablrbd:rgba(79,118,145,0.32);
@@ -42,7 +42,7 @@
   --g:#7FCBA0;--gbg:rgba(127,203,160,0.14);--gbd:rgba(127,203,160,0.34);
   --r:#E69A9A;--rbg:rgba(230,154,154,0.14);--rbd:rgba(230,154,154,0.34);
   --a:#E4BD7D;--abg:rgba(228,189,125,0.15);--abd:rgba(228,189,125,0.35);
-  --p:#B4ABE8;--pbg:rgba(180,171,232,0.15);--pbd:rgba(180,171,232,0.35);
+  --p:#EDC8FF;--pbg:rgba(237,200,255,0.15);--pbd:rgba(237,200,255,0.35);
   --refhead:#E0AFC2;
   --tabdash:#A9C6DE;--tabdashbg:rgba(169,198,222,0.15);--tabdashbd:rgba(169,198,222,0.35);
   --tablr:#E0AFC2;--tablrbg:rgba(224,175,194,0.15);--tablrbd:rgba(224,175,194,0.35);
@@ -56,9 +56,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height:100v
 .brand{font-size:var(--fxs);color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
 h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .sub{font-size:var(--fbase);color:var(--t2);margin-bottom:1.75rem}
-.themetoggle{width:32px;height:32px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.themetoggle{width:16px;height:16px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .themetoggle:hover{opacity:.75}
-.themetoggle svg{width:18px;height:18px;display:block}
+.themetoggle svg{width:16px;height:16px;display:block}
 .banner{background:var(--s2);border:.5px solid var(--bd);border-radius:var(--radl);padding:10px 14px;margin-bottom:.9rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:var(--fbase);color:var(--t2)}
 .banner strong{color:var(--t)}
 .bacts{display:flex;gap:6px;flex-wrap:wrap}
@@ -310,13 +310,15 @@ textarea:focus{border-color:var(--t3)}
 .pbe{background:var(--s2);color:var(--t2);border:.5px solid var(--bd)}
 /* Trade log filter bar */
 .logfilterbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:.75rem}
-.filterbtn{padding:5px 10px;font-size:var(--fsm);font-family:var(--sans);border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t2);cursor:pointer;white-space:nowrap}
+.filterbtn{padding:5px 10px;font-size:var(--fsm);font-family:var(--sans);border:.5px solid transparent;border-radius:var(--rad);background:none;color:var(--t2);cursor:pointer;white-space:nowrap}
 .filterbtn:hover{color:var(--t)}
 .filterbtn.on{color:var(--tablr);background:var(--tablrbg);border-color:var(--tablrbd)}
 .filterdd-wrap{position:relative;display:inline-flex}
 .filterdd{position:absolute;top:30px;left:0;min-width:140px;background:var(--tablrbg-dd);border:.5px solid var(--tablrbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;z-index:50;text-align:left;cursor:default}
 .filterdd-row{display:block;width:100%;text-align:left;padding:6px 12px;background:none;border:none;font-size:var(--fsm);color:var(--t);cursor:pointer;font-family:var(--sans)}
 .filterdd-row:hover{background:var(--tablrbd)}
+.filterdd-check{display:flex;align-items:center;gap:8px;cursor:pointer}
+.filterdd-check input{cursor:pointer;accent-color:var(--tablr)}
 .filterclear{height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
 .filterclear:hover{color:var(--t)}
 .filterclear svg{width:14px;height:14px;display:block}
@@ -436,10 +438,12 @@ function tickerInfo(symbol){return TICKERS.find(t=>t.symbol===symbol)||null;}
 let trades=[],reflections=[],dq=DQ_DEFAULT.map(d=>({...d})),tab="dashboard",showForm=false,editingDq=false,editingId=null,showRefForm=false,expandedId=null;
 let periodMode="week",periodAnchor=new Date(),customFrom="",customTo="";
 let logSort={col:"date",dir:"desc"};
-let logFilters={ticker:"",setup:"",wl:"",process:"",lossCat:""};
+let logFilters={ticker:[],setup:[],wl:[],process:[],lossCat:[]}; // each value is an array — multi-select
 let logFilterOpen=null;   // which filter's dropdown is open: 'ticker'|'setup'|'wl'|'process'|'lossCat'|null
 let logSearchOpen=false;  // search field expanded/collapsed
 let logSearchQuery="";    // free-text search over the trade log
+let refSearchOpen=false;  // search field expanded/collapsed (reflections)
+let refSearchQuery="";    // free-text search over reflections
 let resultManual=false;
 let fillSeq=1;
 
@@ -584,7 +588,7 @@ function closeDriveMenu(){
   driveMenuOpen=false;
   renderDriveStatus();
 }
-document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen)closeLogSearch();});
+document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen)closeLogSearch();if(refSearchOpen)closeRefSearch();});
 async function driveFetchUserEmail(){
   try{
     const res=await driveApiFetch("https://www.googleapis.com/oauth2/v3/userinfo");
@@ -2721,7 +2725,7 @@ function periodBarH(filteredCount,totalCount){
         ${!isCurrentPeriod()?`<button class="pbtoday" onclick="jumpToday()">${periodMode==="week"?"this week":"this month"}</button>`:""}
       </div>`:""}
     </div>
-    <span class="pbcount">${filteredCount} of ${totalCount} trade${totalCount!==1?"s":""}${periodMode!=="all"?" in view":""}</span>
+    ${tab!=="reflection"?`<span class="pbcount">${filteredCount} of ${totalCount} trade${totalCount!==1?"s":""}${periodMode!=="all"?" in view":""}</span>`:""}
   </div>
   ${periodMode==="custom"?`
   <div class="pbcustom">
@@ -2892,9 +2896,8 @@ function setLogSort(col){
   else{logSort.col=col;logSort.dir=col==="date"?"desc":"asc";}
   render();
 }
-function setLogFilter(key,val){logFilters[key]=val;render();}
-function clearLogFilters(){logFilters={ticker:"",setup:"",wl:"",process:"",lossCat:""};render();}
-function hasLogFilters(){return Object.values(logFilters).some(v=>v);}
+function clearLogFilters(){logFilters={ticker:[],setup:[],wl:[],process:[],lossCat:[]};render();}
+function hasLogFilters(){return Object.values(logFilters).some(v=>v.length>0);}
 function uniqueTickersUsed(){
   return Array.from(new Set(trades.map(t=>t.ticker.toUpperCase()))).sort();
 }
@@ -2904,23 +2907,37 @@ function toggleLogFilterDropdown(key,ev){
   logFilterOpen=logFilterOpen===key?null:key;
   render();
 }
-function pickLogFilter(key,val,ev){
+function toggleLogFilterValue(key,val,ev){
+  // Multi-select: toggles one value in the array and keeps the dropdown open
+  // so several options can be picked in one go — it only closes on outside click.
   if(ev)ev.stopPropagation();
-  logFilters[key]=val;
-  logFilterOpen=null;
+  const cur=logFilters[key];
+  const i=cur.indexOf(val);
+  if(i===-1)cur.push(val);else cur.splice(i,1);
+  render();
+}
+function clearOneLogFilter(key,ev){
+  if(ev)ev.stopPropagation();
+  logFilters[key]=[];
   render();
 }
 function closeLogFilterDropdown(){if(logFilterOpen){logFilterOpen=null;render();}}
 function renderFilterBtn(key,allLabel,opts){
   const cur=logFilters[key];
-  const match=opts.find(o=>o.val===cur);
-  const curLabel=cur?(match?match.label:cur):allLabel;
   const open=logFilterOpen===key;
+  let curLabel=allLabel;
+  if(cur.length===1){
+    const match=opts.find(o=>o.val===cur[0]);
+    curLabel=match?match.label:cur[0];
+  }else if(cur.length>1){
+    const match=opts.find(o=>o.val===cur[0]);
+    curLabel=`${match?match.label:cur[0]} +${cur.length-1}`;
+  }
   return`<div class="filterdd-wrap">
-    <button class="filterbtn${(cur||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" title="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
+    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" title="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
     ${open?`<div class="filterdd" onclick="event.stopPropagation()">
-      <button class="filterdd-row" onclick="pickLogFilter('${key}','',event)">${allLabel}</button>
-      ${opts.map(o=>`<button class="filterdd-row" onclick="pickLogFilter('${key}','${o.val}',event)">${esc(o.label)}</button>`).join("")}
+      <button class="filterdd-row" onclick="clearOneLogFilter('${key}',event)">${allLabel}</button>
+      ${opts.map(o=>`<label class="filterdd-row filterdd-check"><input type="checkbox" ${cur.includes(o.val)?"checked":""} onchange="toggleLogFilterValue('${key}','${o.val}',event)"/>${esc(o.label)}</label>`).join("")}
     </div>`:""}
   </div>`;
 }
@@ -2948,6 +2965,37 @@ function onLogSearchInput(el){
     if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
   });
 }
+function toggleRefSearch(ev){
+  if(ev)ev.stopPropagation();
+  refSearchOpen=!refSearchOpen;
+  if(!refSearchOpen)refSearchQuery="";
+  render();
+  if(refSearchOpen){
+    requestAnimationFrame(()=>{const el=document.getElementById("refsearch-input");if(el)el.focus();});
+  }
+}
+function closeRefSearch(){
+  if(!refSearchOpen)return;
+  refSearchOpen=false;refSearchQuery="";
+  render();
+}
+function onRefSearchInput(el){
+  refSearchQuery=el.value;
+  const pos=el.selectionStart;
+  render();
+  requestAnimationFrame(()=>{
+    const ni=document.getElementById("refsearch-input");
+    if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
+  });
+}
+function refSearchMatch(r){
+  // Matches header label, entry date, and every section's question/answer text —
+  // not just what's visible without scrolling — same principle as logSearchMatch.
+  const q=refSearchQuery.trim().toLowerCase();
+  if(!q)return true;
+  const hay=[refHeaderLabel(r),ddmmyy(parseYMD(r.entryDate)),...nonEmptySections(r).flatMap(s=>[s.q,s.a])].filter(Boolean).join(" ").toLowerCase();
+  return hay.includes(q);
+}
 function logSearchMatch(t){
   // Matches everything in a trade, not just the columns visible in the collapsed
   // row — comments/notes only show once a row is expanded, but search still
@@ -2960,15 +3008,15 @@ function logSearchMatch(t){
 }
 function applyLogFilters(list){
   return list.filter(t=>{
-    if(logFilters.ticker&&t.ticker.toUpperCase()!==logFilters.ticker)return false;
-    if(logFilters.setup&&t.setup!==logFilters.setup)return false;
-    if(logFilters.wl&&t.wl!==logFilters.wl)return false;
-    if(logFilters.process){
+    if(logFilters.ticker.length&&!logFilters.ticker.includes(t.ticker.toUpperCase()))return false;
+    if(logFilters.setup.length&&!logFilters.setup.includes(t.setup))return false;
+    if(logFilters.wl.length&&!logFilters.wl.includes(t.wl))return false;
+    if(logFilters.process.length){
       if(t.isGood===null)return false;
-      if(logFilters.process==="good"&&!t.isGood)return false;
-      if(logFilters.process==="bad"&&t.isGood)return false;
+      const procVal=t.isGood?"good":"bad";
+      if(!logFilters.process.includes(procVal))return false;
     }
-    if(logFilters.lossCat&&t.lossCat!==logFilters.lossCat)return false;
+    if(logFilters.lossCat.length&&!logFilters.lossCat.includes(t.lossCat))return false;
     if(!logSearchMatch(t))return false;
     return true;
   });
@@ -3299,12 +3347,20 @@ ${SETUPS.map(setup=>{
 
 // ── Reflection tab ────────────────────────────────────────────────────────────
 function reflectionH(){
-  const list=getFilteredReflections();
-  const filteredOut=periodMode!=="all"&&reflections.length>0&&list.length===0;
+  const list=getFilteredReflections().filter(refSearchMatch);
+  const preSearchList=getFilteredReflections();
+  const filteredOut=periodMode!=="all"&&reflections.length>0&&preSearchList.length===0;
   return`<div>
 <div class="lbar">
-  <span class="lcount">${list.length} reflection${list.length!==1?"s":""} shown${periodMode!=="all"?` (of ${reflections.length} total)`:""}</span>
-  <button class="btn" onclick="toggleRefForm()">${showRefForm?"cancel":"+ add reflection"}</button>
+  <span class="lcount" style="font-size:var(--fxs);font-weight:300">${list.length} of ${reflections.length} reflection${reflections.length!==1?"s":""} shown</span>
+  <div class="logbaricons">
+    <span class="searchwrap">
+      ${refSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="refsearch-input" placeholder="search reflections..." value="${escAttr(refSearchQuery)}" oninput="onRefSearchInput(this)"/></span>`
+      :`<button class="topicon" onclick="toggleRefSearch(event)" title="search reflections">${ICON_SEARCH}</button>`}
+    </span>
+    <span class="iconsep">|</span>
+    <button class="topicon" onclick="toggleRefForm()" title="${showRefForm?"cancel":"add reflection"}">${showRefForm?ICON_X:ICON_PLUS}</button>
+  </div>
 </div>
 
 ${showRefForm?`
@@ -3339,6 +3395,8 @@ ${reflections.length===0
   ?`<div class="empty"><div style="font-size:28px;margin-bottom:8px">📝</div><p>no reflections yet — jot down your first weekly reflection above</p></div>`
   :filteredOut
   ?`<div class="empty"><div style="font-size:28px;margin-bottom:8px">🗓️</div><p>no reflections in this period — try a different week/month or switch back to "All"</p></div>`
+  :(preSearchList.length>0&&list.length===0)
+  ?`<div class="empty"><div style="font-size:28px;margin-bottom:8px">🔍</div><p>no reflections match your search</p></div>`
   :list.map(r=>{
     const secs=nonEmptySections(r);
     return `
@@ -3346,7 +3404,7 @@ ${reflections.length===0
   <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:18px">
     <span style="font-size:var(--fsm);color:var(--refhead);font-weight:700;letter-spacing:.03em">${refHeaderLabel(r)}</span>
     <div style="display:flex;align-items:center;gap:12px">
-      <span style="font-size:var(--fxs);color:var(--t3)">entry date: ${ddmmyy(parseYMD(r.entryDate))}</span>
+      <span style="font-size:var(--fxs);color:var(--t3);font-style:italic">entry date: ${ddmmyy(parseYMD(r.entryDate))}</span>
       <div style="display:flex;gap:2px">
         <button class="delbtn" onclick="editReflection(${r.id})" title="edit reflection">✎</button>
         <button class="delbtn" onclick="delReflection(${r.id})" title="delete reflection">×</button>
