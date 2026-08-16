@@ -20,6 +20,8 @@
   --refhead:#7C9EB8;
   --tabdash:#A15B78;--tabdashbg:rgba(161,91,120,0.12);--tabdashbd:rgba(161,91,120,0.32);
   --tablr:#4F7691;--tablrbg:rgba(79,118,145,0.12);--tablrbd:rgba(79,118,145,0.32);
+  --tabdashbg-dd:#ECDEE4;--tablrbg-dd:#DCE4E9;
+  --pbsel:#A47DAB;--pbselbg:rgba(164,125,171,0.14);--pbselbd:rgba(164,125,171,0.34);
   --rad:8px;--radl:12px;
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
   --mono:var(--sans);
@@ -44,6 +46,8 @@
   --refhead:#E0AFC2;
   --tabdash:#A9C6DE;--tabdashbg:rgba(169,198,222,0.15);--tabdashbd:rgba(169,198,222,0.35);
   --tablr:#E0AFC2;--tablrbg:rgba(224,175,194,0.15);--tablrbd:rgba(224,175,194,0.35);
+  --tabdashbg-dd:#373D44;--tablrbg-dd:#423942;
+  --pbsel:#EDC8FF;--pbselbg:rgba(237,200,255,0.15);--pbselbd:rgba(237,200,255,0.35);
 }
 body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height:100vh;font-size:var(--fbase)}
 .topbaracts{display:flex;align-items:center;gap:14px}
@@ -70,24 +74,29 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .topicon.err:hover{color:var(--r)}
 .topicon.warn{color:var(--a)}
 .topicon.warn:hover{color:var(--a)}
-.topicon.spin{cursor:default;color:var(--t);animation:topiconspin .8s linear infinite}
+.topicon.spin{cursor:pointer;color:var(--t);position:relative;width:16px;height:16px;padding:0}
+.topicon.spin .spin-ico{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;animation:topiconspin .8s linear infinite;transition:opacity .12s}
+.topicon.spin .stop-ico{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s;color:var(--r)}
+.topicon.spin:hover .spin-ico{opacity:0}
+.topicon.spin:hover .stop-ico{opacity:1}
 @keyframes topiconspin{to{transform:rotate(360deg)}}
 .drivemenu-wrap{position:relative;display:inline-flex}
-.drivemenu{position:absolute;top:22px;right:0;min-width:210px;background:var(--tabdashbg);border:.5px solid var(--tabdashbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px 0;z-index:50;text-align:left;cursor:default}
+.drivemenu{position:absolute;top:22px;right:0;min-width:210px;background:var(--tabdashbg-dd);border:.5px solid var(--tabdashbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px 0;z-index:50;text-align:left;cursor:default}
 .drivemenu-email{padding:2px 12px 8px;font-size:var(--fsm);color:var(--t2);border-bottom:.5px solid var(--tabdashbd);margin-bottom:4px;word-break:break-all}
 .drivemenu-row{display:block;width:100%;text-align:left;padding:7px 12px;background:none;border:none;font-size:var(--fbase);color:var(--t);cursor:pointer;font-family:var(--sans)}
 .drivemenu-row:hover{background:var(--tabdashbd)}
 .drivemenu-synced{padding:6px 12px 2px;font-size:var(--fxs);color:var(--t3);text-align:right;border-top:.5px solid var(--tabdashbd);margin-top:4px;font-style:italic}
 /* Period bar */
 .periodbar{display:flex;flex-direction:column;margin-bottom:1.5rem}
-.pbtop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pbrow{display:flex;align-items:center;justify-content:center;position:relative;padding:2px 0}
+.pbcenter{display:flex;align-items:center;flex-wrap:wrap;justify-content:center}
 .pbmodes{display:flex;align-items:center;gap:7px}
 .pbtn{padding:3px 9px;border-radius:calc(var(--rad) - 1px);font-size:var(--fsm);font-weight:300;font-family:var(--sans);cursor:pointer;border:.5px solid transparent;color:var(--t2);background:transparent;transition:all .15s}
-.pbtn.on{background:var(--pbg);color:var(--p);border-color:var(--pbd);font-weight:600}
+.pbtn.on{background:var(--pbselbg);color:var(--pbsel);border-color:var(--pbselbd);font-weight:600}
 .pbtn:hover:not(.on){color:var(--t)}
 .pbsep{font-size:var(--fsm);color:var(--t3);user-select:none}
-.pbcount{font-size:var(--fxs);font-weight:300;color:var(--t3)}
-.pbnav{display:flex;align-items:center;gap:5px;margin-top:5px;margin-left:9px;font-size:var(--fxs);font-weight:300;color:var(--t3)}
+.pbcount{position:absolute;right:0;font-size:var(--fxs);font-weight:300;color:var(--t3)}
+.pbnav{display:flex;align-items:center;gap:5px;margin-left:9px;font-size:var(--fxs);font-weight:300;color:var(--t3)}
 .pbarrow{color:var(--t3);cursor:pointer;transition:color .15s;line-height:1;padding:0 2px;margin-right:2px}
 .pbarrow:hover{color:var(--t)}
 .pblabel{font-size:var(--fxs);font-weight:300;color:var(--t3);margin-right:6px}
@@ -95,7 +104,7 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .pbtoday:hover{opacity:.8}
 .pbcustom{display:flex;align-items:center;gap:6px;margin-top:5px;margin-left:9px}
 .pbcustom input{padding:5px 8px;font-size:var(--fxs);font-family:var(--sans);border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t)}
-.tabs{display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:1.5rem}
+.tabs{display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:.85rem}
 .tab{padding:6px 14px;border-radius:calc(var(--rad) - 1px);font-size:var(--fbase);font-family:var(--sans);cursor:pointer;border:.5px solid transparent;color:var(--t2);background:transparent;transition:all .15s}
 .tab.on{font-weight:600}
 .tab.on.tab-dashboard{background:var(--tabdashbg);color:var(--tabdash);border-color:var(--tabdashbd)}
@@ -158,8 +167,7 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .dqeditrow input:focus{border-color:var(--t3)}
 .dqok{font-size:var(--fxs);color:var(--t3);margin-top:6px}
 /* Table */
-.lbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px}
-.lcount{font-size:var(--fbase);color:var(--t2)}
+.lcountbottom{text-align:right;font-size:var(--fxs);font-weight:300;font-style:italic;color:var(--t3);margin-top:8px}
 .empty{text-align:center;padding:3.5rem 1rem;border:.5px solid var(--bd);border-radius:var(--radl);color:var(--t2);font-size:var(--fbase)}
 .twrap{overflow-x:auto;border:.5px solid var(--bd);border-radius:var(--radl)}
 table{width:100%;border-collapse:collapse;font-size:var(--fsm)}
@@ -306,7 +314,7 @@ textarea:focus{border-color:var(--t3)}
 .filterbtn:hover{color:var(--t)}
 .filterbtn.on{color:var(--tablr);background:var(--tablrbg);border-color:var(--tablrbd)}
 .filterdd-wrap{position:relative;display:inline-flex}
-.filterdd{position:absolute;top:30px;left:0;min-width:140px;background:var(--tablrbg);border:.5px solid var(--tablrbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;z-index:50;text-align:left;cursor:default}
+.filterdd{position:absolute;top:30px;left:0;min-width:140px;background:var(--tablrbg-dd);border:.5px solid var(--tablrbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;z-index:50;text-align:left;cursor:default}
 .filterdd-row{display:block;width:100%;text-align:left;padding:6px 12px;background:none;border:none;font-size:var(--fsm);color:var(--t);cursor:pointer;font-family:var(--sans)}
 .filterdd-row:hover{background:var(--tablrbd)}
 .filterclear{height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
@@ -398,6 +406,8 @@ const DRIVE_MIRROR_DIRTY_KEY="wss_drive_mirror_dirty";
 let driveMirrorDirty=false;       // item 3 — true when appData saved but the mirror write failed right after; retried standalone
 let driveSaveInFlight=false;      // item 10 — true while a save's staleness-check+write cycle is actually talking to Drive
 let driveSaveQueued=false;        // item 10 — true when another save was requested mid-flight; coalesced into one fresh follow-up run
+let driveAbortController=null;    // manual hard-stop — the in-flight request's controller, if any
+let driveForceStopped=false;      // set right before aborting so the resulting fetch rejection doesn't surface as a scary error
 const DRIVE_AUTO_BACKUP_KEY="wss_drive_last_backup"; // item 7
 const DRIVE_BACKUP_INTERVAL_DAYS=7;
 const DRIVE_BACKUP_PRUNE_DAYS=60;
@@ -542,7 +552,7 @@ function fmtSyncTime(iso){
   return `${dd} ${mon} ${yy}, ${hh}:${mi}`;
 }
 function driveStatusHtml(){
-  if(driveConnecting||driveSyncing)return`<span class="topicon spin" title="${driveConnecting?"connecting…":"syncing…"}">${DRIVE_SPIN_SVG}</span>`;
+  if(driveConnecting||driveSyncing)return`<button class="topicon spin" onclick="driveForceStop()" title="${driveConnecting?"connecting…":"syncing…"} — hover and click to stop"><span class="spin-ico">${DRIVE_SPIN_SVG}</span><span class="stop-ico">${ICON_X}</span></button>`;
   if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" title="newer changes were saved from another device — click to reload them">${ICON_WARN}</button>`;
   if(drivePendingSync)return`<span class="topicon warn" title="offline — your changes are saved locally and will sync automatically once you're back online">${ICON_CLOCK}</span>`;
   if(driveSyncError)return`<span class="topicon err" title="${escAttr(driveSyncError)}">${DRIVE_ERR_SVG}</span>`;
@@ -574,7 +584,7 @@ function closeDriveMenu(){
   driveMenuOpen=false;
   renderDriveStatus();
 }
-document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(logFilterOpen)closeLogFilterDropdown();});
+document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen)closeLogSearch();});
 async function driveFetchUserEmail(){
   try{
     const res=await driveApiFetch("https://www.googleapis.com/oauth2/v3/userinfo");
@@ -651,6 +661,7 @@ async function attemptDriveAutoConnect(){
   if(!tc)return;
   driveConnecting=true;renderDriveStatus();
   tc.callback=async(resp)=>{
+    if(driveForceStopped)return; // user hit stop while this was still waiting on Google — discard the late response
     if(resp.error){
       driveConnecting=false;driveSyncError="";
       renderDriveStatus();
@@ -710,6 +721,7 @@ function connectDrive(){
   }
   driveConnecting=true;driveSyncError="";renderDriveStatus();
   tc.callback=async(resp)=>{
+    if(driveForceStopped)return;
     if(resp.error){
       driveConnecting=false;
       driveSyncError="sign-in failed ("+resp.error+")";
@@ -736,6 +748,7 @@ function switchDriveAccount(){
   }
   driveConnecting=true;driveSyncError="";driveUserEmail=null;renderDriveStatus();
   tc.callback=async(resp)=>{
+    if(driveForceStopped)return;
     if(resp.error){
       driveConnecting=false;
       driveSyncError="switch account failed ("+resp.error+")";
@@ -764,9 +777,28 @@ function disconnectDrive(){
   driveAutoConnectAttempted=true; // an explicit disconnect should stick — don't silently reconnect on the next reload
   renderDriveStatus();
 }
+function driveBeginAttempt(){
+  driveForceStopped=false;
+  driveAbortController=new AbortController();
+  return driveAbortController;
+}
+function driveForceStop(){
+  // Manual hard-stop for a sync/connect that's stuck — cancels whatever request
+  // is actually in flight and snaps every busy flag back to idle, with no error
+  // banner (this was a deliberate stop, not a failure).
+  driveForceStopped=true;
+  if(driveAbortController){try{driveAbortController.abort();}catch(e){}}
+  driveAbortController=null;
+  clearDriveRetry();
+  if(driveRefreshTimer){clearTimeout(driveRefreshTimer);driveRefreshTimer=null;}
+  driveConnecting=false;driveSyncing=false;driveSaveInFlight=false;driveSaveQueued=false;
+  drivePendingSync=false;driveStaleConflict=false;driveSyncError="";driveMenuOpen=false;
+  render();
+}
 async function driveApiFetch(url,options){
   options=options||{};
   options.headers={...(options.headers||{}),Authorization:"Bearer "+driveAccessToken};
+  if(driveAbortController)options.signal=driveAbortController.signal;
   const res=await fetch(url,options);
   if(!res.ok){
     let detail="";
@@ -825,6 +857,7 @@ function driveSyncPayload(){
 }
 async function driveConnectFlow(){
   driveSyncError="";
+  driveBeginAttempt();
   try{
     const foundAppData=await driveFindFile(DRIVE_APPDATA_NAME,true);
     if(foundAppData){
@@ -861,6 +894,7 @@ async function driveConnectFlow(){
     try{localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));}catch(e){}
     render();
   }catch(e){
+    if(driveForceStopped){driveForceStopped=false;return;} // manual stop — driveForceStop() already reset everything and rendered
     driveConnecting=false;
     driveSyncError=(e.message||String(e));
     render();
@@ -873,6 +907,7 @@ async function driveReloadLatest(){
   // that's the trade-off for not silently clobbering the other device's save.
   if(!driveAppDataFileId||!driveConnected)return;
   driveSyncing=true;driveStaleConflict=false;renderDriveStatus();
+  driveBeginAttempt();
   try{
     const raw=await driveDownloadFile(driveAppDataFileId);
     const d=JSON.parse(raw||"{}");
@@ -883,6 +918,7 @@ async function driveReloadLatest(){
     try{localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));}catch(e){}
     driveSyncError="";
   }catch(e){
+    if(driveForceStopped){driveForceStopped=false;return;}
     driveSyncError="reload failed ("+(e.message||e)+")";
   }
   driveSyncing=false;render();
@@ -948,6 +984,7 @@ async function driveSaveAll(){
   }
   driveSaveInFlight=true;
   driveSyncing=true;renderDriveStatus();
+  driveBeginAttempt();
   try{
     // Staleness check — if another device saved since we last loaded/saved,
     // don't blindly overwrite their changes with our (older) in-memory state.
@@ -981,6 +1018,7 @@ async function driveSaveAll(){
     if(driveMirrorDirty)scheduleDriveRetry();else clearDriveRetry();
     maybeRunWeeklyBackup(); // item 7 — fire and forget, checked on every successful save
   }catch(e){
+    if(driveForceStopped){driveForceStopped=false;driveSaveInFlight=false;driveSaveQueued=false;return;}
     const msg=(e&&e.message)||String(e);
     const looksOffline=!navigator.onLine||/Failed to fetch|NetworkError|network error/i.test(msg);
     if(looksOffline){
@@ -2660,28 +2698,31 @@ ${violCount>0
 }
 
 // ── Period bar ────────────────────────────────────────────────────────────────
+function pbShortLabel(label){ return label?label.replace(/^Week of /,""):""; }
 function periodBarH(filteredCount,totalCount){
   const r=periodRange();
   return`<div class="periodbar">
-  <div class="pbtop">
-    <div class="pbmodes">
-      <button class="pbtn${periodMode==="all"?" on":""}" onclick="setPeriod('all')">All</button>
-      <span class="pbsep">|</span>
-      <button class="pbtn${periodMode==="week"?" on":""}" onclick="setPeriod('week')">Week</button>
-      <span class="pbsep">|</span>
-      <button class="pbtn${periodMode==="month"?" on":""}" onclick="setPeriod('month')">Month</button>
-      <span class="pbsep">|</span>
-      <button class="pbtn${periodMode==="custom"?" on":""}" onclick="setPeriod('custom')">Custom</button>
+  <div class="pbrow">
+    <div class="pbcenter">
+      <div class="pbmodes">
+        <button class="pbtn${periodMode==="all"?" on":""}" onclick="setPeriod('all')">All</button>
+        <span class="pbsep">|</span>
+        <button class="pbtn${periodMode==="week"?" on":""}" onclick="setPeriod('week')">Week</button>
+        <span class="pbsep">|</span>
+        <button class="pbtn${periodMode==="month"?" on":""}" onclick="setPeriod('month')">Month</button>
+        <span class="pbsep">|</span>
+        <button class="pbtn${periodMode==="custom"?" on":""}" onclick="setPeriod('custom')">Custom</button>
+      </div>
+      ${(periodMode==="week"||periodMode==="month")?`
+      <div class="pbnav">
+        <span class="pbarrow" onclick="shiftPeriod(-1)">‹</span>
+        <span class="pblabel">${r?pbShortLabel(r.label):""}</span>
+        <span class="pbarrow" onclick="shiftPeriod(1)">›</span>
+        ${!isCurrentPeriod()?`<button class="pbtoday" onclick="jumpToday()">${periodMode==="week"?"this week":"this month"}</button>`:""}
+      </div>`:""}
     </div>
     <span class="pbcount">${filteredCount} of ${totalCount} trade${totalCount!==1?"s":""}${periodMode!=="all"?" in view":""}</span>
   </div>
-  ${(periodMode==="week"||periodMode==="month")?`
-  <div class="pbnav">
-    <span class="pbarrow" onclick="shiftPeriod(-1)">‹</span>
-    <span class="pblabel">${r?r.label:""}</span>
-    <span class="pbarrow" onclick="shiftPeriod(1)">›</span>
-    ${!isCurrentPeriod()?`<button class="pbtoday" onclick="jumpToday()">${periodMode==="week"?"this week":"this month"}</button>`:""}
-  </div>`:""}
   ${periodMode==="custom"?`
   <div class="pbcustom">
     <input type="date" id="pb-from" value="${customFrom}" onchange="setCustomRange()"/>
@@ -2755,8 +2796,9 @@ function render(){
       <button class="topicon" onclick="expData()" title="export .json">${ICON_DOWN}</button>
       <span class="iconsep">|</span>
       <button class="topicon" onclick="openExportOptions()" title="share summary (.html)">${ICON_DOWN}${ICON_DOC}</button>
+      <span class="iconsep">|</span>
+      <button class="themetoggle" onclick="toggleTheme()" title="toggle theme">${isDark?ICON_SUN:ICON_MOON}</button>
     </div>
-    <button class="themetoggle" onclick="toggleTheme()" title="toggle theme">${isDark?ICON_SUN:ICON_MOON}</button>
   </div>
 </div>
 ${driveStaleConflict?`<div class="banner" style="border-color:var(--abd);background:var(--abg)">
@@ -2892,6 +2934,11 @@ function toggleLogSearch(ev){
     requestAnimationFrame(()=>{const el=document.getElementById("logsearch-input");if(el)el.focus();});
   }
 }
+function closeLogSearch(){
+  if(!logSearchOpen)return;
+  logSearchOpen=false;logSearchQuery="";
+  render();
+}
 function onLogSearchInput(el){
   logSearchQuery=el.value;
   const pos=el.selectionStart;
@@ -2902,9 +2949,13 @@ function onLogSearchInput(el){
   });
 }
 function logSearchMatch(t){
+  // Matches everything in a trade, not just the columns visible in the collapsed
+  // row — comments/notes only show once a row is expanded, but search still
+  // needs to find them without the user opening every row first.
   const q=logSearchQuery.trim().toLowerCase();
   if(!q)return true;
-  const hay=[t.ticker,t.setup,t.wl,t.direction,dispDate(t.date)].filter(Boolean).join(" ").toLowerCase();
+  const lc=t.lossCat?LOSSCATS.find(c=>c.id===t.lossCat):null;
+  const hay=[t.ticker,t.setup,t.wl,t.direction,dispDate(t.date),t.comments,lc?lc.label:""].filter(Boolean).join(" ").toLowerCase();
   return hay.includes(q);
 }
 function applyLogFilters(list){
@@ -2971,20 +3022,20 @@ function logH(en){
     return`<th class="sortable${active?" sorted":""}" onclick="setLogSort('${h.key}')" title="sort by ${h.label}">${h.label}${arrow}</th>`;
   }).join("");
   return`<div>
-<div class="lbar">
-  <span class="lcount">${logList.length} trade${logList.length!==1?"s":""} shown${(periodMode!=="all"||filtersOn)?` (of ${trades.length} total)`:""}</span>
-</div>
-
 ${trades.length>0?`<div class="logfilterbar">
   ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})))}
+  <span class="iconsep">|</span>
   ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})))}
+  <span class="iconsep">|</span>
   ${renderFilterBtn("wl","all W/L",[{val:"Win",label:"Win"},{val:"Loss",label:"Loss"},{val:"BE",label:"Breakeven"}])}
+  <span class="iconsep">|</span>
   ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}])}
+  <span class="iconsep">|</span>
   ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})))}
   ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" title="clear filters">${ICON_X}</button>`:""}
   <div class="logbaricons">
     <span class="searchwrap">
-      ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="search trades..." value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)"/></span><button class="topicon" onclick="toggleLogSearch(event)" title="close search">${ICON_X}</button>`
+      ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="search trades..." value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)"/></span>`
       :`<button class="topicon" onclick="toggleLogSearch(event)" title="search trades">${ICON_SEARCH}</button>`}
     </span>
     <span class="iconsep">|</span>
@@ -3088,6 +3139,7 @@ ${logList.map(t=>{
   return row+(expandedId===t.id?expandRowH(t):"");
 }).join("")}
 </tbody></table></div>`}
+${trades.length>0?`<div class="lcountbottom">${logList.length} of ${trades.length} trades shown</div>`:""}
 </div>`;
 }
 
