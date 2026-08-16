@@ -944,6 +944,19 @@ function pc(n){return n===null||isNaN(n)?"—":`${(n*100).toFixed(1)}%`}
 function sc(v){return v===null?"var(--t3)":v>=.8?"var(--g)":v>=.5?"var(--a)":"var(--r)"}
 function sbg(v){return v===null?"var(--s2)":v>=.8?"var(--gbg)":v>=.5?"var(--abg)":"var(--rbg)"}
 function sbd(v){return v===null?"var(--bd)":v>=.8?"var(--gbd)":v>=.5?"var(--abd)":"var(--rbd)"}
+// item 8 — same "DD MMM YY, HH:MM" (24hr) formatter as the main journal's
+// connected-account dropdown (item 4), applied here for consistency.
+function fmtSyncTime(iso){
+  if(!iso)return"—";
+  const d=new Date(iso);
+  if(isNaN(d.getTime()))return"—";
+  const dd=String(d.getDate()).padStart(2,"0");
+  const mon=MON[d.getMonth()].slice(0,3);
+  const yy=String(d.getFullYear()).slice(-2);
+  const hh=String(d.getHours()).padStart(2,"0");
+  const mi=String(d.getMinutes()).padStart(2,"0");
+  return `${dd} ${mon} ${yy}, ${hh}:${mi}`;
+}
 function esc(s){return (s||"").replace(/</g,"&lt;");}
 function escAttr(s){return (s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
 
@@ -2141,7 +2154,7 @@ function render(){
   <div>
     <p class="brand">J.</p>
     <h1>trading journal<span class="robadge" title="read-only">${ICON_NOEDIT}</span></h1>
-    <p class="sub" style="margin-bottom:0"><strong>${trades.length}</strong> trades · shared view, synced from the owner's journal</p>
+    <p class="sub" style="margin-bottom:0"><strong>${trades.length}</strong> trades · last synced: ${fmtSyncTime(driveModifiedTime)}</p>
   </div>
   <div class="topbaracts">
     <div class="bacts bacts-slim">
@@ -2655,16 +2668,27 @@ ${reflections.length===0
 }
 
 // ── Boot (read-only: load from the shared Google Drive file) ───────────────────
+let driveModifiedTime=null; // item 8 — Drive's own modifiedTime for the mirror file, shown as "last synced"
 async function loadFromDrive(){
-  document.getElementById("app").innerHTML=`<div style="padding:3rem;text-align:center;color:var(--t2)">loading shared journal…</div>`;
+  // item 5 — replaces the earlier generic loading text with a thin, small,
+  // italic "loading viewer journal..." (deferred the original loading-skeleton
+  // ask; this is the smaller replacement that was scoped in instead).
+  document.getElementById("app").innerHTML=`<div style="padding:3rem;text-align:center;color:var(--t2);font-weight:300;font-size:var(--fsm);font-style:italic">loading viewer journal...</div>`;
   try{
-    const url=`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?alt=media&key=${DRIVE_API_KEY}`;
-    const res=await fetch(url);
-    if(!res.ok)throw new Error("Drive fetch failed: "+res.status);
-    const d=await res.json();
+    const contentUrl=`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?alt=media&key=${DRIVE_API_KEY}`;
+    const metaUrl=`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?fields=modifiedTime&key=${DRIVE_API_KEY}`;
+    const [contentRes,metaRes]=await Promise.all([fetch(contentUrl),fetch(metaUrl)]);
+    if(!contentRes.ok)throw new Error("Drive fetch failed: "+contentRes.status);
+    const d=await contentRes.json();
     if(Array.isArray(d.trades))trades=d.trades.map(migrateTrade);
     if(d.dq&&d.dq.length)dq=d.dq;
     if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);
+    // item 8 — non-fatal if this one fails; the journal content is what matters,
+    // "last synced" just falls back to "—" via fmtSyncTime(null) if it's missing.
+    if(metaRes.ok){
+      const meta=await metaRes.json();
+      driveModifiedTime=meta.modifiedTime||null;
+    }
   }catch(e){
     document.getElementById("app").innerHTML=`<div style="padding:3rem;text-align:center;color:var(--r)">Couldn't load the shared journal right now.<br/><span style="color:var(--t3);font-size:var(--fsm)">${e.message||e}</span></div>`;
     return;
