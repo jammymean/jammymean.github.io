@@ -70,6 +70,12 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .topicon.warn:hover{color:var(--a)}
 .topicon.spin{cursor:default;color:var(--t);animation:topiconspin .8s linear infinite}
 @keyframes topiconspin{to{transform:rotate(360deg)}}
+.drivemenu-wrap{position:relative;display:inline-flex}
+.drivemenu{position:absolute;top:22px;right:0;min-width:210px;background:var(--surface);border:.5px solid var(--bdm);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px 0;z-index:50;text-align:left;cursor:default}
+.drivemenu-email{padding:2px 12px 8px;font-size:var(--fsm);color:var(--t2);border-bottom:.5px solid var(--bd);margin-bottom:4px;word-break:break-all}
+.drivemenu-row{display:block;width:100%;text-align:left;padding:7px 12px;background:none;border:none;font-size:var(--fbase);color:var(--t);cursor:pointer;font-family:var(--sans)}
+.drivemenu-row:hover{background:var(--s2)}
+.drivemenu-synced{padding:6px 12px 2px;font-size:var(--fxs);color:var(--t3);text-align:right;border-top:.5px solid var(--bd);margin-top:4px}
 /* Period bar */
 .periodbar{display:flex;flex-direction:column;margin-bottom:1.5rem}
 .pbtop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -351,7 +357,7 @@ const KEY="wss_j3";
 // Client ID only — never a client secret (this is a public browser app; secrets
 // are for confidential server-side clients and are never needed here).
 const DRIVE_CLIENT_ID="88752282122-kgd1b0kt3v9vo6vkod2d9ra3h0ta1jc8.apps.googleusercontent.com";
-const DRIVE_SCOPES="https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file";
+const DRIVE_SCOPES="https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
 const DRIVE_APPDATA_NAME="journal-data.json";   // private file, lives in the invisible appDataFolder
 const DRIVE_MIRROR_NAME="journal-mirror.json";  // public "anyone with the link" copy for the mentor viewer
 let driveTokenClient=null;
@@ -368,6 +374,15 @@ let driveStaleConflict=false;     // true when a save was blocked because Drive 
 let driveRetryTimer=null;
 const DRIVE_TOKEN_CACHE_KEY="wss_drive_token";
 let driveAutoConnectAttempted=false; // guards against attempting the on-load silent reconnect more than once
+let driveTokenExpiresAt=0;        // item 9 — tracks the current token's expiry so a single refresh timer can be scheduled off it
+let driveRefreshTimer=null;       // item 9 — the one mid-session silent-refresh timer in flight, if any
+let driveMenuOpen=false;          // item 6 — connected-account dropdown open/closed
+let driveUserEmail=null;          // item 6 — filled in after connect via the userinfo.email scope
+const DRIVE_MIRROR_DIRTY_KEY="wss_drive_mirror_dirty";
+let driveMirrorDirty=false;       // item 3 — true when appData saved but the mirror write failed right after; retried standalone
+const DRIVE_AUTO_BACKUP_KEY="wss_drive_last_backup"; // item 7
+const DRIVE_BACKUP_INTERVAL_DAYS=7;
+const DRIVE_BACKUP_PRUNE_DAYS=60;
 
 // Futures contract specs — $/point drives leveraged risk/reward math.
 const TICKERS=[
@@ -486,13 +501,60 @@ const ICON_DOC=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const ICON_NOEDIT=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>`;
 const ICON_CLOCK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>`;
 const ICON_WARN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3Z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>`;
+// item 4 — shared "DD MMM YY, HH:MM" (24hr) formatter for last-synced timestamps,
+// used in the connected-account dropdown here and (matching format, for consistency)
+// in viewer.html's last-synced text.
+function fmtSyncTime(iso){
+  if(!iso)return"—";
+  const d=new Date(iso);
+  if(isNaN(d.getTime()))return"—";
+  const dd=String(d.getDate()).padStart(2,"0");
+  const mon=MON[d.getMonth()].slice(0,3);
+  const yy=String(d.getFullYear()).slice(-2);
+  const hh=String(d.getHours()).padStart(2,"0");
+  const mi=String(d.getMinutes()).padStart(2,"0");
+  return `${dd} ${mon} ${yy}, ${hh}:${mi}`;
+}
 function driveStatusHtml(){
   if(driveConnecting||driveSyncing)return`<span class="topicon spin" title="${driveConnecting?"connecting…":"syncing…"}">${DRIVE_SPIN_SVG}</span>`;
   if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" title="newer changes were saved from another device — click to reload them">${ICON_WARN}</button>`;
   if(drivePendingSync)return`<span class="topicon warn" title="offline — your changes are saved locally and will sync automatically once you're back online">${ICON_CLOCK}</span>`;
   if(driveSyncError)return`<span class="topicon err" title="${escAttr(driveSyncError)}">${DRIVE_ERR_SVG}</span>`;
-  if(driveConnected)return`<button class="topicon ok" onclick="disconnectDrive()" title="disconnect">${ICON_CHECK}</button>`;
+  // item 6 — connected: the checkmark is now a dropdown trigger (account info,
+  // switch account, disconnect, last synced) instead of an immediate disconnect.
+  if(driveConnected)return`<span class="drivemenu-wrap">
+    <button class="topicon ok" onclick="toggleDriveMenu(event)" title="account">${ICON_CHECK}</button>
+    ${driveMenuOpen?driveMenuHtml():""}
+  </span>`;
   return`<button class="topicon" onclick="connectDrive()" title="connect Google Drive">${ICON_LINK}</button>`;
+}
+// item 6 — the connected-account dropdown itself: email (only shown here, never
+// at rest on the topbar), switch account, disconnect, and last synced (item 4).
+function driveMenuHtml(){
+  return`<div class="drivemenu" onclick="event.stopPropagation()">
+    <div class="drivemenu-email">${driveUserEmail?esc(driveUserEmail):"…"}</div>
+    <button class="drivemenu-row" onclick="switchDriveAccount()">switch account</button>
+    <button class="drivemenu-row" onclick="disconnectDrive()">disconnect</button>
+    <div class="drivemenu-synced">last synced: ${fmtSyncTime(driveKnownModifiedTime)}</div>
+  </div>`;
+}
+function toggleDriveMenu(ev){
+  if(ev)ev.stopPropagation();
+  driveMenuOpen=!driveMenuOpen;
+  renderDriveStatus();
+}
+function closeDriveMenu(){
+  if(!driveMenuOpen)return;
+  driveMenuOpen=false;
+  renderDriveStatus();
+}
+document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();});
+async function driveFetchUserEmail(){
+  try{
+    const res=await driveApiFetch("https://www.googleapis.com/oauth2/v3/userinfo");
+    const d=await res.json();
+    driveUserEmail=d.email||null;
+  }catch(e){driveUserEmail=null;}
 }
 function renderDriveStatus(){
   const el=document.getElementById("drive-status");
@@ -504,8 +566,9 @@ function renderDriveStatus(){
 // to a silent (no-popup) re-auth if it's expired but the browser still has
 // an active Google session from a prior connect.
 function cacheDriveToken(token,expiresInSeconds){
+  const expiresAt=Date.now()+((expiresInSeconds||3600)*1000);
+  driveTokenExpiresAt=expiresAt; // item 9 — tracked even if the localStorage write below fails
   try{
-    const expiresAt=Date.now()+((expiresInSeconds||3600)*1000);
     localStorage.setItem(DRIVE_TOKEN_CACHE_KEY,JSON.stringify({token,expiresAt}));
   }catch(e){}
 }
@@ -544,6 +607,7 @@ async function attemptDriveAutoConnect(){
   const stillValid=cached.expiresAt-60000>Date.now(); // 60s safety buffer before expiry
   if(stillValid){
     driveAccessToken=cached.token;
+    driveTokenExpiresAt=cached.expiresAt; // item 9 — reusing the cache, not calling cacheDriveToken(), so set this explicitly
     driveConnecting=true;renderDriveStatus();
     driveSyncError="";
     await driveConnectFlow();
@@ -578,6 +642,40 @@ function ensureDriveTokenClient(){
   driveTokenClient=google.accounts.oauth2.initTokenClient({client_id:DRIVE_CLIENT_ID,scope:DRIVE_SCOPES,callback:""});
   return driveTokenClient;
 }
+// item 9 — mid-session token refresh. GIS access tokens live ~1hr; item 1 only
+// covers the on-page-load case. This closes the gap for a tab left open
+// continuously by scheduling one silent (no-popup) refresh ~5 min before the
+// current token expires, reusing the exact same prompt:"none" reauth path
+// attemptDriveAutoConnect() already uses. Only one timer is ever in flight,
+// so there's no concurrent-refresh race to guard against.
+function clearDriveRefreshTimer(){
+  if(driveRefreshTimer){clearTimeout(driveRefreshTimer);driveRefreshTimer=null;}
+}
+function scheduleDriveTokenRefresh(expiresAt){
+  clearDriveRefreshTimer();
+  const refreshAt=expiresAt-5*60*1000; // ~5 min safety margin before expiry
+  const delay=Math.max(refreshAt-Date.now(),0);
+  driveRefreshTimer=setTimeout(silentDriveTokenRefresh,delay);
+}
+function silentDriveTokenRefresh(){
+  driveRefreshTimer=null;
+  if(!driveConnected)return; // disconnected since this was scheduled — nothing to refresh
+  const tc=ensureDriveTokenClient();
+  if(!tc)return; // GIS unavailable right now — falls through to the existing
+                  // failure surface: the next Drive call with the stale token
+                  // 401s and shows as a sync error, same as before item 9 existed.
+  tc.callback=(resp)=>{
+    if(resp.error)return; // silent refresh failed (session signed out elsewhere,
+    // access revoked) — fails quietly, no popup, no alarming message. No data
+    // is lost either way: saves already write to localStorage first (Phase 1),
+    // and the next Drive call will 401 and route into the existing offline-style
+    // retry/error handling rather than this feature needing its own.
+    driveAccessToken=resp.access_token;
+    cacheDriveToken(resp.access_token,resp.expires_in);
+    scheduleDriveTokenRefresh(driveTokenExpiresAt); // reschedule for the next cycle
+  };
+  tc.requestAccessToken({prompt:"none"});
+}
 function connectDrive(){
   const tc=ensureDriveTokenClient();
   if(!tc){
@@ -598,6 +696,32 @@ function connectDrive(){
   };
   tc.requestAccessToken({prompt:"consent"});
 }
+// item 6 — "switch account" row in the dropdown. Hints Google's own account
+// picker via prompt:'select_account'. On success this runs through the same
+// driveConnectFlow() as any other connect, which naturally isolates data per
+// Google account (a different account's appData/mirror files are separate,
+// created fresh the first time) — no special-casing needed for that.
+function switchDriveAccount(){
+  closeDriveMenu();
+  const tc=ensureDriveTokenClient();
+  if(!tc){
+    alert("Google sign-in is still loading — wait a second and try again.");
+    return;
+  }
+  driveConnecting=true;driveSyncError="";driveUserEmail=null;renderDriveStatus();
+  tc.callback=async(resp)=>{
+    if(resp.error){
+      driveConnecting=false;
+      driveSyncError="switch account failed ("+resp.error+")";
+      renderDriveStatus();
+      return;
+    }
+    driveAccessToken=resp.access_token;
+    cacheDriveToken(resp.access_token,resp.expires_in);
+    await driveConnectFlow();
+  };
+  tc.requestAccessToken({prompt:"select_account"});
+}
 function disconnectDrive(){
   if(driveAccessToken&&typeof google!=="undefined"&&google.accounts&&google.accounts.oauth2){
     google.accounts.oauth2.revoke(driveAccessToken,()=>{});
@@ -605,6 +729,9 @@ function disconnectDrive(){
   driveAccessToken=null;driveConnected=false;driveConnecting=false;
   driveAppDataFileId=null;driveMirrorFileId=null;driveSyncError="";
   driveKnownModifiedTime=null;drivePendingSync=false;driveStaleConflict=false;
+  driveMenuOpen=false;driveUserEmail=null;                    // item 6
+  driveTokenExpiresAt=0;clearDriveRefreshTimer();              // item 9
+  setMirrorDirty(false);                                       // item 3
   clearDriveRetry();
   clearCachedDriveToken();
   driveAutoConnectAttempted=true; // an explicit disconnect should stick — don't silently reconnect on the next reload
@@ -698,6 +825,12 @@ async function driveConnectFlow(){
     driveConnected=true;driveConnecting=false;
     console.log("[drive] appData file id:",driveAppDataFileId);
     console.log("[drive] mirror file id:",driveMirrorFileId);
+    scheduleDriveTokenRefresh(driveTokenExpiresAt); // item 9 — single choke point for every successful connect path
+    driveFetchUserEmail();                          // item 6 — fire and forget; dropdown shows "…" until this resolves
+    if(getMirrorDirtyFlag()){                       // item 3 — resume a retry left over from before a page reload
+      driveMirrorDirty=true;
+      scheduleDriveRetry();
+    }
     try{localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));}catch(e){}
     render();
   }catch(e){
@@ -727,14 +860,43 @@ async function driveReloadLatest(){
   }
   driveSyncing=false;render();
 }
+// item 3 — the mirror-dirty flag itself. Cached in localStorage (not just in
+// memory) so a reload before the retry loop catches up doesn't lose track of
+// the fact the mirror is stale — driveConnectFlow() checks this on every
+// (re)connect and resumes the retry if needed.
+function setMirrorDirty(v){
+  driveMirrorDirty=v;
+  try{
+    if(v)localStorage.setItem(DRIVE_MIRROR_DIRTY_KEY,"1");
+    else localStorage.removeItem(DRIVE_MIRROR_DIRTY_KEY);
+  }catch(e){}
+}
+function getMirrorDirtyFlag(){
+  try{return localStorage.getItem(DRIVE_MIRROR_DIRTY_KEY)==="1";}catch(e){return false;}
+}
 function scheduleDriveRetry(){
   if(driveRetryTimer)return;
   driveRetryTimer=setInterval(()=>{
-    if(navigator.onLine&&drivePendingSync&&driveConnected)driveSaveAll();
+    if(!navigator.onLine||!driveConnected)return;
+    if(drivePendingSync){driveSaveAll();return;}
+    if(driveMirrorDirty)retryMirrorWrite();
   },20000);
 }
 function clearDriveRetry(){
   if(driveRetryTimer){clearInterval(driveRetryTimer);driveRetryTimer=null;}
+}
+// item 3 — standalone mirror catch-up, used when appData saved fine but the
+// mirror write right after it failed. Rebuilds the payload fresh each retry
+// (rather than replaying the stale one) so it reflects any newer edits too.
+async function retryMirrorWrite(){
+  if(!driveMirrorFileId||!driveConnected||!driveAccessToken)return;
+  try{
+    await driveUpdateFile(driveMirrorFileId,driveSyncPayload());
+    setMirrorDirty(false);
+    if(!drivePendingSync)clearDriveRetry();
+  }catch(e){
+    // still dirty — next 20s tick tries again, no user-facing error for this
+  }
 }
 async function driveSaveAll(){
   if(!driveConnected||!driveAccessToken)return;
@@ -760,8 +922,21 @@ async function driveSaveAll(){
       const updated=await driveUpdateFile(driveAppDataFileId,payload);
       driveKnownModifiedTime=updated.modifiedTime;
     }
-    if(driveMirrorFileId)await driveUpdateFile(driveMirrorFileId,payload);
-    driveSyncError="";drivePendingSync=false;clearDriveRetry();
+    if(driveMirrorFileId){
+      // item 3 — the mirror write is isolated from the try/catch below on
+      // purpose: appData already has the latest data at this point, so a
+      // mirror failure shouldn't be treated as a failed save overall. Flag it
+      // and let the retry loop catch it up standalone instead.
+      try{
+        await driveUpdateFile(driveMirrorFileId,payload);
+        if(driveMirrorDirty)setMirrorDirty(false);
+      }catch(mirrorErr){
+        setMirrorDirty(true);
+      }
+    }
+    driveSyncError="";drivePendingSync=false;
+    if(driveMirrorDirty)scheduleDriveRetry();else clearDriveRetry();
+    maybeRunWeeklyBackup(); // item 7 — fire and forget, checked on every successful save
   }catch(e){
     const msg=(e&&e.message)||String(e);
     const looksOffline=!navigator.onLine||/Failed to fetch|NetworkError|network error/i.test(msg);
@@ -773,6 +948,55 @@ async function driveSaveAll(){
     }
   }
   driveSyncing=false;renderDriveStatus();
+}
+// item 7 — weekly automatic Drive backup. Reuses the existing dated .json
+// export naming convention (ddmmyy(), same as the manual "export .json"
+// button), written to regular Drive space (not appData) as a new file each
+// time rather than overwritten like the mirror, and left private (no
+// driveSetPublicReadable call — unlike the mirror this isn't meant to be shared).
+function getLastAutoBackupDate(){
+  try{const raw=localStorage.getItem(DRIVE_AUTO_BACKUP_KEY);return raw?new Date(raw):null;}catch(e){return null;}
+}
+function setLastAutoBackupDate(d){
+  try{localStorage.setItem(DRIVE_AUTO_BACKUP_KEY,d.toISOString());}catch(e){}
+}
+async function maybeRunWeeklyBackup(){
+  if(!driveConnected||!driveAccessToken)return;
+  const last=getLastAutoBackupDate();
+  const now=new Date();
+  if(last&&(now-last)<DRIVE_BACKUP_INTERVAL_DAYS*24*60*60*1000)return;
+  try{
+    const name=`J.'s TS A${ddmmyy(now)}.json`;
+    await driveCreateFile(name,driveSyncPayload(),false);
+    setLastAutoBackupDate(now);
+    await pruneOldBackups();
+  }catch(e){
+    // Best-effort background backup — a failed attempt just means
+    // lastAutoBackupDate didn't move forward, so it's retried on the next
+    // successful save rather than needing its own error surface.
+    console.log("[drive] weekly backup failed, will retry on next save:",e.message||e);
+  }
+}
+// Deletes auto-backup files older than 60 days. Lists files visible under the
+// drive.file scope (which — since this app never opens a picker — is just the
+// mirror plus prior auto-backups) and filters client-side by the backup
+// filename prefix so the mirror is never touched.
+async function pruneOldBackups(){
+  try{
+    const params=new URLSearchParams({q:"trashed=false",fields:"files(id,name,createdTime)",spaces:"drive"});
+    const res=await driveApiFetch("https://www.googleapis.com/drive/v3/files?"+params.toString());
+    const d=await res.json();
+    const files=(d.files||[]).filter(f=>f.name&&f.name.indexOf("J.'s TS A")===0&&f.name.endsWith(".json"));
+    const cutoff=Date.now()-DRIVE_BACKUP_PRUNE_DAYS*24*60*60*1000;
+    for(const f of files){
+      const created=new Date(f.createdTime).getTime();
+      if(created<cutoff){
+        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${f.id}`,{method:"DELETE"});
+      }
+    }
+  }catch(e){
+    console.log("[drive] backup prune failed, will retry next time:",e.message||e);
+  }
 }
 window.addEventListener("online",()=>{
   if(drivePendingSync&&driveConnected)driveSaveAll();
