@@ -62,11 +62,14 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .bacts{display:flex;gap:6px;flex-wrap:wrap}
 .storagebar{font-size:var(--fxs);color:var(--t3)}
 .drivebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.drivestat{font-size:var(--fxs);color:var(--t3)}
+.drivebar .btn{font-size:11px;font-weight:400;padding:5px 10px;line-height:1}
+.drivestat{font-size:var(--fxs);color:var(--t3);display:inline-flex;align-items:center;gap:5px}
 .drivestat.err{color:var(--r)}
-.drivestat.ok{color:var(--g)}
+.drivestat.ok{color:var(--g);font-weight:700}
 .drivelink{background:none;border:none;color:var(--t3);font-size:var(--fxs);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-family:var(--sans);padding:0}
 .drivelink:hover{color:var(--t)}
+.drivespin{display:inline-block;animation:drivespin .8s linear infinite}
+@keyframes drivespin{to{transform:rotate(360deg)}}
 /* Period bar */
 .periodbar{display:flex;flex-direction:column;margin-bottom:1.5rem}
 .pbtop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -469,11 +472,10 @@ function load(){
 // public mirror file. No staleness check and no offline queue yet (Phase 2).
 function driveStatusHtml(){
   if(driveConnecting)return`<span class="drivestat">connecting…</span>`;
-  if(driveSyncing)return`<span class="drivestat">syncing…</span>`;
+  if(driveSyncing)return`<span class="drivestat"><span class="drivespin">⟳</span> syncing</span>`;
   if(driveSyncError)return`<span class="drivestat err">${esc(driveSyncError)}</span>`;
   if(driveConnected){
-    const idLine=driveMirrorFileId?` <span class="drivestat">· mirror file id: <span class="mono" style="user-select:all">${esc(driveMirrorFileId)}</span></span>`:"";
-    return`<span class="drivestat ok">drive connected ✓</span> <button class="drivelink" onclick="disconnectDrive()">disconnect</button>${idLine}`;
+    return`<span class="drivestat ok">✓</span> <button class="drivelink" onclick="disconnectDrive()">disconnect</button>`;
   }
   return"";
 }
@@ -2279,7 +2281,7 @@ function render(){
   </div>
   <div class="topbaracts">
     <div class="drivebar">
-      <button id="drive-connect-btn" class="btn" style="display:${driveConnected?"none":""}" onclick="connectDrive()">🔗 connect google drive</button>
+      <button id="drive-connect-btn" class="btn" style="display:${driveConnected?"none":""}" onclick="connectDrive()" title="connect google drive">🔗</button>
       <span id="drive-status">${driveStatusHtml()}</span>
     </div>
     <div class="bacts bacts-slim">
