@@ -58,14 +58,16 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .banner strong{color:var(--t)}
 .bacts{display:flex;gap:6px;flex-wrap:wrap}
 .storagebar{font-size:var(--fxs);color:var(--t3)}
-.topicons{display:inline-flex;align-items:center;gap:10px}
-.iconsep{color:var(--t3);user-select:none;font-size:12px}
-.topicon{width:15px;height:15px;font-size:15px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;background:none;border:none;padding:0;color:var(--t2);font-family:var(--sans);white-space:nowrap;flex-shrink:0}
+.topicons{display:inline-flex;align-items:center;gap:9px}
+.iconsep{color:var(--bdm);user-select:none;font-size:13px;line-height:1}
+.topicon{height:16px;display:inline-flex;align-items:center;justify-content:center;gap:3px;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
 .topicon:hover{color:var(--t)}
-.topicon svg{width:15px;height:15px;display:block}
-.topicon.ok{color:var(--g);font-weight:700}
+.topicon svg{width:16px;height:16px;display:block;flex-shrink:0}
+.topicon.ok{color:var(--g)}
 .topicon.err{color:var(--r);cursor:default}
 .topicon.err:hover{color:var(--r)}
+.topicon.warn{color:var(--a)}
+.topicon.warn:hover{color:var(--a)}
 .topicon.spin{cursor:default;color:var(--t);animation:topiconspin .8s linear infinite}
 @keyframes topiconspin{to{transform:rotate(360deg)}}
 /* Period bar */
@@ -360,6 +362,10 @@ let driveSyncing=false;
 let driveSyncError="";
 let driveAppDataFileId=null;
 let driveMirrorFileId=null;
+let driveKnownModifiedTime=null;  // Drive's own modifiedTime for the appData file, cached after every successful load/save — used to detect another device having saved since
+let drivePendingSync=false;       // true when a save couldn't reach Drive (offline) and is waiting to retry
+let driveStaleConflict=false;     // true when a save was blocked because Drive has newer changes than what we last loaded
+let driveRetryTimer=null;
 
 // Futures contract specs — $/point drives leveraged risk/reward math.
 const TICKERS=[
@@ -470,11 +476,21 @@ function load(){
 // public mirror file. No staleness check and no offline queue yet (Phase 2).
 const DRIVE_SPIN_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>`;
 const DRIVE_ERR_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12" y2="16.01"/></svg>`;
+const ICON_LINK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
+const ICON_CHECK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+const ICON_UP=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
+const ICON_DOWN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
+const ICON_DOC=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l4 4v13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M4 7v13a1 1 0 0 0 1 1h10"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="11" x2="17" y2="11"/><line x1="9" y1="14" x2="17" y2="14"/><line x1="9" y1="17" x2="15" y2="17"/></svg>`;
+const ICON_NOEDIT=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>`;
+const ICON_CLOCK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>`;
+const ICON_WARN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3Z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>`;
 function driveStatusHtml(){
   if(driveConnecting||driveSyncing)return`<span class="topicon spin" title="${driveConnecting?"connecting…":"syncing…"}">${DRIVE_SPIN_SVG}</span>`;
+  if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" title="newer changes were saved from another device — click to reload them">${ICON_WARN}</button>`;
+  if(drivePendingSync)return`<span class="topicon warn" title="offline — your changes are saved locally and will sync automatically once you're back online">${ICON_CLOCK}</span>`;
   if(driveSyncError)return`<span class="topicon err" title="${escAttr(driveSyncError)}">${DRIVE_ERR_SVG}</span>`;
-  if(driveConnected)return`<button class="topicon ok" onclick="disconnectDrive()" title="disconnect">✓</button>`;
-  return`<button class="topicon" onclick="connectDrive()" title="connect Google Drive">🔗</button>`;
+  if(driveConnected)return`<button class="topicon ok" onclick="disconnectDrive()" title="disconnect">${ICON_CHECK}</button>`;
+  return`<button class="topicon" onclick="connectDrive()" title="connect Google Drive">${ICON_LINK}</button>`;
 }
 function renderDriveStatus(){
   const el=document.getElementById("drive-status");
@@ -511,6 +527,8 @@ function disconnectDrive(){
   }
   driveAccessToken=null;driveConnected=false;driveConnecting=false;
   driveAppDataFileId=null;driveMirrorFileId=null;driveSyncError="";
+  driveKnownModifiedTime=null;drivePendingSync=false;driveStaleConflict=false;
+  clearDriveRetry();
   renderDriveStatus();
 }
 async function driveApiFetch(url,options){
@@ -526,10 +544,15 @@ async function driveApiFetch(url,options){
 }
 async function driveFindFile(name,isAppData){
   const q=`name='${name.replace(/'/g,"\\'")}' and trashed=false`;
-  const params=new URLSearchParams({q,fields:"files(id,name)",spaces:isAppData?"appDataFolder":"drive"});
+  const params=new URLSearchParams({q,fields:"files(id,name,modifiedTime)",spaces:isAppData?"appDataFolder":"drive"});
   const res=await driveApiFetch("https://www.googleapis.com/drive/v3/files?"+params.toString());
   const d=await res.json();
   return(d.files&&d.files.length)?d.files[0]:null;
+}
+async function driveGetModifiedTime(fileId){
+  const res=await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=modifiedTime`);
+  const d=await res.json();
+  return d.modifiedTime;
 }
 async function driveDownloadFile(fileId){
   const res=await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
@@ -542,7 +565,7 @@ async function driveCreateFile(name,content,isAppData){
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`+
     `--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n`+
     `--${boundary}--`;
-  const res=await driveApiFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",{
+  const res=await driveApiFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime",{
     method:"POST",
     headers:{"Content-Type":`multipart/related; boundary=${boundary}`},
     body
@@ -550,11 +573,12 @@ async function driveCreateFile(name,content,isAppData){
   return res.json();
 }
 async function driveUpdateFile(fileId,content){
-  await driveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,{
+  const res=await driveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&fields=modifiedTime`,{
     method:"PATCH",
     headers:{"Content-Type":"application/json"},
     body:content
   });
+  return res.json();
 }
 async function driveSetPublicReadable(fileId){
   await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,{
@@ -572,6 +596,7 @@ async function driveConnectFlow(){
     const foundAppData=await driveFindFile(DRIVE_APPDATA_NAME,true);
     if(foundAppData){
       driveAppDataFileId=foundAppData.id;
+      driveKnownModifiedTime=foundAppData.modifiedTime;
       const raw=await driveDownloadFile(foundAppData.id);
       const d=JSON.parse(raw||"{}");
       if(Array.isArray(d.trades))trades=d.trades.map(migrateTrade);
@@ -580,6 +605,7 @@ async function driveConnectFlow(){
     }else{
       const created=await driveCreateFile(DRIVE_APPDATA_NAME,driveSyncPayload(),true);
       driveAppDataFileId=created.id;
+      driveKnownModifiedTime=created.modifiedTime;
     }
     const foundMirror=await driveFindFile(DRIVE_MIRROR_NAME,false);
     if(foundMirror){
@@ -601,19 +627,77 @@ async function driveConnectFlow(){
     render();
   }
 }
-async function driveSaveAll(){
-  if(!driveConnected||!driveAccessToken)return;
-  driveSyncing=true;renderDriveStatus();
+async function driveReloadLatest(){
+  // Pulls whatever's currently on Drive and replaces in-memory state with it —
+  // used after a staleness conflict, where another device saved more recently
+  // than what we last loaded here. Whatever hadn't been saved locally is lost;
+  // that's the trade-off for not silently clobbering the other device's save.
+  if(!driveAppDataFileId||!driveConnected)return;
+  driveSyncing=true;driveStaleConflict=false;renderDriveStatus();
   try{
-    const payload=driveSyncPayload();
-    if(driveAppDataFileId)await driveUpdateFile(driveAppDataFileId,payload);
-    if(driveMirrorFileId)await driveUpdateFile(driveMirrorFileId,payload);
+    const raw=await driveDownloadFile(driveAppDataFileId);
+    const d=JSON.parse(raw||"{}");
+    if(Array.isArray(d.trades))trades=d.trades.map(migrateTrade);
+    if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);
+    if(d.dq&&d.dq.length)dq=d.dq;
+    driveKnownModifiedTime=await driveGetModifiedTime(driveAppDataFileId);
+    try{localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));}catch(e){}
     driveSyncError="";
   }catch(e){
-    driveSyncError="sync failed — saved locally only ("+(e.message||e)+")";
+    driveSyncError="reload failed ("+(e.message||e)+")";
+  }
+  driveSyncing=false;render();
+}
+function scheduleDriveRetry(){
+  if(driveRetryTimer)return;
+  driveRetryTimer=setInterval(()=>{
+    if(navigator.onLine&&drivePendingSync&&driveConnected)driveSaveAll();
+  },20000);
+}
+function clearDriveRetry(){
+  if(driveRetryTimer){clearInterval(driveRetryTimer);driveRetryTimer=null;}
+}
+async function driveSaveAll(){
+  if(!driveConnected||!driveAccessToken)return;
+  if(!navigator.onLine){
+    drivePendingSync=true;driveSyncError="";renderDriveStatus();
+    scheduleDriveRetry();
+    return;
+  }
+  driveSyncing=true;renderDriveStatus();
+  try{
+    // Staleness check — if another device saved since we last loaded/saved,
+    // don't blindly overwrite their changes with our (older) in-memory state.
+    if(driveAppDataFileId&&driveKnownModifiedTime){
+      const current=await driveGetModifiedTime(driveAppDataFileId);
+      if(current&&current!==driveKnownModifiedTime){
+        driveSyncing=false;driveStaleConflict=true;driveSyncError="";
+        renderDriveStatus();
+        return;
+      }
+    }
+    const payload=driveSyncPayload();
+    if(driveAppDataFileId){
+      const updated=await driveUpdateFile(driveAppDataFileId,payload);
+      driveKnownModifiedTime=updated.modifiedTime;
+    }
+    if(driveMirrorFileId)await driveUpdateFile(driveMirrorFileId,payload);
+    driveSyncError="";drivePendingSync=false;clearDriveRetry();
+  }catch(e){
+    const msg=(e&&e.message)||String(e);
+    const looksOffline=!navigator.onLine||/Failed to fetch|NetworkError|network error/i.test(msg);
+    if(looksOffline){
+      drivePendingSync=true;driveSyncError="";
+      scheduleDriveRetry();
+    }else{
+      driveSyncError="sync failed — saved locally only ("+msg+")";
+    }
   }
   driveSyncing=false;renderDriveStatus();
 }
+window.addEventListener("online",()=>{
+  if(drivePendingSync&&driveConnected)driveSaveAll();
+});
 
 // ── Date / period helpers ─────────────────────────────────────────────────────
 function parseYMD(s){const p=s.split("-").map(Number);return new Date(p[0],p[1]-1,p[2]);}
@@ -2278,15 +2362,22 @@ function render(){
     <div class="topicons">
       <span id="drive-status">${driveStatusHtml()}</span>
       <span class="iconsep">|</span>
-      <button class="topicon" onclick="impData()" title="import">↑</button>
+      <button class="topicon" onclick="impData()" title="import">${ICON_UP}</button>
       <span class="iconsep">|</span>
-      <button class="topicon" onclick="expData()" title="export .json">↓</button>
+      <button class="topicon" onclick="expData()" title="export .json">${ICON_DOWN}</button>
       <span class="iconsep">|</span>
-      <button class="topicon" onclick="openExportOptions()" title="share summary (.html)">↓📝</button>
+      <button class="topicon" onclick="openExportOptions()" title="share summary (.html)">${ICON_DOWN}${ICON_DOC}</button>
     </div>
     <button class="themetoggle" onclick="toggleTheme()" title="toggle theme">${isDark?"☀️":"🌙"}</button>
   </div>
 </div>
+${driveStaleConflict?`<div class="banner" style="border-color:var(--abd);background:var(--abg)">
+  <span><strong>Newer changes were saved from another device.</strong> Your last change here wasn't synced, to avoid overwriting them.</span>
+  <div class="bacts"><button class="btn" onclick="driveReloadLatest()">reload latest</button></div>
+</div>`:""}
+${drivePendingSync?`<div class="banner">
+  <span>You're offline — changes are saved on this device and will sync automatically once you're back online.</span>
+</div>`:""}
 <div class="tabs">
   <button class="tab tab-log${tab==="log"?" on":""}" onclick="setTab('log')">trade log</button>
   <span class="tabsep">|</span>
