@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>J. — Trading Journal</title>
 <script>(function(){try{var t=localStorage.getItem("wss_theme")||"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -16,6 +17,9 @@
   --r:#C97878;--rbg:rgba(201,120,120,0.12);--rbd:rgba(201,120,120,0.32);
   --a:#BD9142;--abg:rgba(189,145,66,0.14);--abd:rgba(189,145,66,0.34);
   --p:#8377C9;--pbg:rgba(131,119,201,0.14);--pbd:rgba(131,119,201,0.34);
+  --refhead:#7C9EB8;
+  --tabdash:#A15B78;--tabdashbg:rgba(161,91,120,0.12);--tabdashbd:rgba(161,91,120,0.32);
+  --tablr:#4F7691;--tablrbg:rgba(79,118,145,0.12);--tablrbd:rgba(79,118,145,0.32);
   --rad:8px;--radl:12px;
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
   --mono:var(--sans);
@@ -37,10 +41,17 @@
   --r:#E69A9A;--rbg:rgba(230,154,154,0.14);--rbd:rgba(230,154,154,0.34);
   --a:#E4BD7D;--abg:rgba(228,189,125,0.15);--abd:rgba(228,189,125,0.35);
   --p:#B4ABE8;--pbg:rgba(180,171,232,0.15);--pbd:rgba(180,171,232,0.35);
+  --refhead:#E0AFC2;
+  --tabdash:#A9C6DE;--tabdashbg:rgba(169,198,222,0.15);--tabdashbd:rgba(169,198,222,0.35);
+  --tablr:#E0AFC2;--tablrbg:rgba(224,175,194,0.15);--tablrbd:rgba(224,175,194,0.35);
 }
 body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height:100vh;font-size:var(--fbase)}
+.topbaracts{display:flex;align-items:center;gap:10px}
+.bacts-slim{opacity:.65}
+.bacts-slim .btn{font-size:11px;font-weight:400;padding:5px 10px}
+.bacts-slim .btng{font-weight:400}
 #app{max-width:1152px;margin:0 auto;padding:2rem 1.25rem 4rem}
-.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:1.5rem}
 .brand{font-size:var(--fxs);color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
 h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .sub{font-size:var(--fbase);color:var(--t2);margin-bottom:1.75rem}
@@ -50,25 +61,36 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .banner strong{color:var(--t)}
 .bacts{display:flex;gap:6px;flex-wrap:wrap}
 .storagebar{font-size:var(--fxs);color:var(--t3)}
+.drivebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.drivestat{font-size:var(--fxs);color:var(--t3)}
+.drivestat.err{color:var(--r)}
+.drivestat.ok{color:var(--g)}
+.drivelink{background:none;border:none;color:var(--t3);font-size:var(--fxs);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-family:var(--sans);padding:0}
+.drivelink:hover{color:var(--t)}
 /* Period bar */
-.periodbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:1.5rem;padding:10px 14px;background:var(--s2);border:.5px solid var(--bd);border-radius:var(--radl)}
-.pbmodes{display:flex;gap:3px;background:var(--surface);padding:3px;border-radius:var(--rad);border:.5px solid var(--bd)}
-.pbtn{padding:6px 13px;border-radius:calc(var(--rad) - 1px);font-size:var(--fsm);font-family:var(--sans);cursor:pointer;border:.5px solid transparent;color:var(--t2);background:transparent;transition:all .15s}
+.periodbar{display:flex;flex-direction:column;margin-bottom:1.5rem}
+.pbtop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pbmodes{display:flex;align-items:center;gap:7px}
+.pbtn{padding:3px 9px;border-radius:calc(var(--rad) - 1px);font-size:var(--fsm);font-weight:300;font-family:var(--sans);cursor:pointer;border:.5px solid transparent;color:var(--t2);background:transparent;transition:all .15s}
 .pbtn.on{background:var(--pbg);color:var(--p);border-color:var(--pbd);font-weight:600}
 .pbtn:hover:not(.on){color:var(--t)}
-.pbnav{display:flex;align-items:center;gap:8px}
-.pbarrow{width:26px;height:26px;border-radius:50%;border:.5px solid var(--bd);background:var(--surface);color:var(--t2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
-.pbarrow:hover{background:var(--s2);color:var(--t)}
-.pblabel{font-size:var(--fbase);font-weight:600;color:var(--t);min-width:150px;text-align:center}
-.pbtoday{font-size:var(--fxs);padding:4px 10px;border-radius:var(--rad);border:.5px solid var(--bdm);background:var(--surface);color:var(--t2);cursor:pointer}
-.pbtoday:hover{color:var(--t)}
-.pbcustom{display:flex;align-items:center;gap:6px}
-.pbcustom input{padding:6px 8px;font-size:var(--fsm);font-family:var(--sans);border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t)}
-.pbcount{font-size:var(--fxs);color:var(--t3);margin-left:auto}
-.tabs{display:flex;gap:3px;background:var(--s2);padding:3px;border-radius:var(--rad);width:fit-content;margin-bottom:1.5rem;border:.5px solid var(--bd)}
-.tab{padding:7px 22px;border-radius:calc(var(--rad) - 1px);font-size:var(--fbase);font-family:var(--sans);cursor:pointer;border:.5px solid transparent;color:var(--t2);background:transparent;transition:all .15s}
-.tab.on{background:var(--surface);color:var(--t);border-color:var(--bd);font-weight:600}
+.pbsep{font-size:var(--fsm);color:var(--t3);user-select:none}
+.pbcount{font-size:var(--fxs);font-weight:300;color:var(--t3)}
+.pbnav{display:flex;align-items:center;gap:5px;margin-top:5px;margin-left:9px;font-size:var(--fxs);font-weight:300;color:var(--t3)}
+.pbarrow{color:var(--t3);cursor:pointer;transition:color .15s;line-height:1;padding:0 2px;margin-right:2px}
+.pbarrow:hover{color:var(--t)}
+.pblabel{font-size:var(--fxs);font-weight:300;color:var(--t3);margin-right:6px}
+.pbtoday{font-size:var(--fxs);font-weight:300;color:var(--p);cursor:pointer;background:none;border:none;padding:0}
+.pbtoday:hover{opacity:.8}
+.pbcustom{display:flex;align-items:center;gap:6px;margin-top:5px;margin-left:9px}
+.pbcustom input{padding:5px 8px;font-size:var(--fxs);font-family:var(--sans);border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t)}
+.tabs{display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:1.5rem}
+.tab{padding:6px 14px;border-radius:calc(var(--rad) - 1px);font-size:var(--fbase);font-family:var(--sans);cursor:pointer;border:.5px solid transparent;color:var(--t2);background:transparent;transition:all .15s}
+.tab.on{font-weight:600}
+.tab.on.tab-dashboard{background:var(--tabdashbg);color:var(--tabdash);border-color:var(--tabdashbd)}
+.tab.on.tab-log,.tab.on.tab-reflection{background:var(--tablrbg);color:var(--tablr);border-color:var(--tablrbd)}
 .tab:hover:not(.on){color:var(--t)}
+.tabsep{color:var(--t3);user-select:none}
 .btn{font-family:var(--sans);font-size:var(--fbase);padding:7px 16px;border-radius:var(--rad);border:.5px solid var(--bdm);background:var(--s2);color:var(--t);cursor:pointer;transition:all .15s}
 .btn:hover{background:var(--surface)}
 .btng{background:var(--gbg);color:var(--g);border-color:var(--gbd);font-weight:600}
@@ -322,6 +344,22 @@ const MON=["January","February","March","April","May","June","July","August","Se
 const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const KEY="wss_j3";
 
+// ── Google Drive sync (Phase 1) ────────────────────────────────────────────────
+// Client ID only — never a client secret (this is a public browser app; secrets
+// are for confidential server-side clients and are never needed here).
+const DRIVE_CLIENT_ID="88752282122-kgd1b0kt3v9vo6vkod2d9ra3h0ta1jc8.apps.googleusercontent.com";
+const DRIVE_SCOPES="https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file";
+const DRIVE_APPDATA_NAME="journal-data.json";   // private file, lives in the invisible appDataFolder
+const DRIVE_MIRROR_NAME="journal-mirror.json";  // public "anyone with the link" copy for the mentor viewer
+let driveTokenClient=null;
+let driveAccessToken=null;
+let driveConnected=false;
+let driveConnecting=false;
+let driveSyncing=false;
+let driveSyncError="";
+let driveAppDataFileId=null;
+let driveMirrorFileId=null;
+
 // Futures contract specs — $/point drives leveraged risk/reward math.
 const TICKERS=[
   {symbol:"M2K", underlying:"Russell 2000 (1/10 RTY)", category:"micro", perPoint:5,    tick:0.10, tickDollar:0.50},
@@ -380,6 +418,7 @@ function save(){
   }catch(e){
     alert("Storage is full — the browser's local storage limit has been hit, most likely from screenshots. Export a backup (.json), then delete a few older screenshots to free up room.");
   }
+  driveSaveAll();
 }
 function storageInfo(){
   let bytes=0;
@@ -420,6 +459,163 @@ function load(){
       reflections=[migrateReflection({id:Date.now(),date:td(),best:d.ref.best||"",broke:d.ref.broke||"",improve:d.ref.improve||""})];
     }
   }catch(e){}
+}
+
+// ── Google Drive sync — Phase 1: connect, initial load/seed, write-through ────
+// Data model: once connected, Drive is the source of truth. Connecting fetches
+// the private appData file and REPLACES in-memory state with it (or, if no
+// appData file exists yet, seeds Drive from whatever's currently in the
+// browser). Every save() afterwards writes to both the private file and the
+// public mirror file. No staleness check and no offline queue yet (Phase 2).
+function driveStatusHtml(){
+  if(driveConnecting)return`<span class="drivestat">connecting…</span>`;
+  if(driveSyncing)return`<span class="drivestat">syncing…</span>`;
+  if(driveSyncError)return`<span class="drivestat err">${esc(driveSyncError)}</span>`;
+  if(driveConnected){
+    const idLine=driveMirrorFileId?` <span class="drivestat">· mirror file id: <span class="mono" style="user-select:all">${esc(driveMirrorFileId)}</span></span>`:"";
+    return`<span class="drivestat ok">drive connected ✓</span> <button class="drivelink" onclick="disconnectDrive()">disconnect</button>${idLine}`;
+  }
+  return"";
+}
+function renderDriveStatus(){
+  const el=document.getElementById("drive-status");
+  if(el)el.innerHTML=driveStatusHtml();
+  const btn=document.getElementById("drive-connect-btn");
+  if(btn)btn.style.display=driveConnected?"none":"";
+}
+function ensureDriveTokenClient(){
+  if(driveTokenClient)return driveTokenClient;
+  if(typeof google==="undefined"||!google.accounts||!google.accounts.oauth2)return null;
+  driveTokenClient=google.accounts.oauth2.initTokenClient({client_id:DRIVE_CLIENT_ID,scope:DRIVE_SCOPES,callback:""});
+  return driveTokenClient;
+}
+function connectDrive(){
+  const tc=ensureDriveTokenClient();
+  if(!tc){
+    alert("Google sign-in is still loading — wait a second and click Connect again.");
+    return;
+  }
+  driveConnecting=true;driveSyncError="";renderDriveStatus();
+  tc.callback=async(resp)=>{
+    if(resp.error){
+      driveConnecting=false;
+      driveSyncError="sign-in failed ("+resp.error+")";
+      renderDriveStatus();
+      return;
+    }
+    driveAccessToken=resp.access_token;
+    await driveConnectFlow();
+  };
+  tc.requestAccessToken({prompt:"consent"});
+}
+function disconnectDrive(){
+  if(driveAccessToken&&typeof google!=="undefined"&&google.accounts&&google.accounts.oauth2){
+    google.accounts.oauth2.revoke(driveAccessToken,()=>{});
+  }
+  driveAccessToken=null;driveConnected=false;driveConnecting=false;
+  driveAppDataFileId=null;driveMirrorFileId=null;driveSyncError="";
+  renderDriveStatus();
+}
+async function driveApiFetch(url,options){
+  options=options||{};
+  options.headers={...(options.headers||{}),Authorization:"Bearer "+driveAccessToken};
+  const res=await fetch(url,options);
+  if(!res.ok){
+    let detail="";
+    try{const j=await res.json();detail=j.error&&j.error.message?j.error.message:"";}catch(e){}
+    throw new Error("Drive API error "+res.status+(detail?": "+detail:""));
+  }
+  return res;
+}
+async function driveFindFile(name,isAppData){
+  const q=`name='${name.replace(/'/g,"\\'")}' and trashed=false`;
+  const params=new URLSearchParams({q,fields:"files(id,name)",spaces:isAppData?"appDataFolder":"drive"});
+  const res=await driveApiFetch("https://www.googleapis.com/drive/v3/files?"+params.toString());
+  const d=await res.json();
+  return(d.files&&d.files.length)?d.files[0]:null;
+}
+async function driveDownloadFile(fileId){
+  const res=await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  return res.text();
+}
+async function driveCreateFile(name,content,isAppData){
+  const metadata=isAppData?{name,parents:["appDataFolder"]}:{name};
+  const boundary="-------driveJournalBoundary"+Date.now();
+  const body=
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`+
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n`+
+    `--${boundary}--`;
+  const res=await driveApiFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",{
+    method:"POST",
+    headers:{"Content-Type":`multipart/related; boundary=${boundary}`},
+    body
+  });
+  return res.json();
+}
+async function driveUpdateFile(fileId,content){
+  await driveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,{
+    method:"PATCH",
+    headers:{"Content-Type":"application/json"},
+    body:content
+  });
+}
+async function driveSetPublicReadable(fileId){
+  await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({role:"reader",type:"anyone"})
+  });
+}
+function driveSyncPayload(){
+  return JSON.stringify({trades,reflections,dq,lastModified:new Date().toISOString()});
+}
+async function driveConnectFlow(){
+  driveSyncError="";
+  try{
+    const foundAppData=await driveFindFile(DRIVE_APPDATA_NAME,true);
+    if(foundAppData){
+      driveAppDataFileId=foundAppData.id;
+      const raw=await driveDownloadFile(foundAppData.id);
+      const d=JSON.parse(raw||"{}");
+      if(Array.isArray(d.trades))trades=d.trades.map(migrateTrade);
+      if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);
+      if(d.dq&&d.dq.length)dq=d.dq;
+    }else{
+      const created=await driveCreateFile(DRIVE_APPDATA_NAME,driveSyncPayload(),true);
+      driveAppDataFileId=created.id;
+    }
+    const foundMirror=await driveFindFile(DRIVE_MIRROR_NAME,false);
+    if(foundMirror){
+      driveMirrorFileId=foundMirror.id;
+      await driveUpdateFile(driveMirrorFileId,driveSyncPayload());
+    }else{
+      const createdMirror=await driveCreateFile(DRIVE_MIRROR_NAME,driveSyncPayload(),false);
+      driveMirrorFileId=createdMirror.id;
+      await driveSetPublicReadable(driveMirrorFileId);
+    }
+    driveConnected=true;driveConnecting=false;
+    console.log("[drive] appData file id:",driveAppDataFileId);
+    console.log("[drive] mirror file id:",driveMirrorFileId);
+    try{localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));}catch(e){}
+    render();
+  }catch(e){
+    driveConnecting=false;
+    driveSyncError=(e.message||String(e));
+    render();
+  }
+}
+async function driveSaveAll(){
+  if(!driveConnected||!driveAccessToken)return;
+  driveSyncing=true;renderDriveStatus();
+  try{
+    const payload=driveSyncPayload();
+    if(driveAppDataFileId)await driveUpdateFile(driveAppDataFileId,payload);
+    if(driveMirrorFileId)await driveUpdateFile(driveMirrorFileId,payload);
+    driveSyncError="";
+  }catch(e){
+    driveSyncError="sync failed — saved locally only ("+(e.message||e)+")";
+  }
+  driveSyncing=false;renderDriveStatus();
 }
 
 // ── Date / period helpers ─────────────────────────────────────────────────────
@@ -1357,8 +1553,8 @@ function expSummaryHTML(includeStats){
   const reflectionCards=refList.map(rf=>{
     const secs=nonEmptySections(rf);
     return `<div class="tcard">
-      <div class="thead2"><strong>${refHeaderLabel(rf)}</strong><span style="font-size:11px;color:var(--t3);font-weight:400">entry date: ${ddmmyy(parseYMD(rf.entryDate))}</span></div>
-      ${secs.map((s,i)=>`<div class="tcomment"${i===0?' style="margin-top:10px;padding-top:0;border-top:none"':' style="margin-top:14px;padding-top:14px"'}>
+      <div class="thead2"><strong style="color:var(--refhead)">${refHeaderLabel(rf)}</strong><span style="font-size:11px;color:var(--t3);font-weight:400">entry date: ${ddmmyy(parseYMD(rf.entryDate))}</span></div>
+      ${secs.map((s,i)=>`<div class="tcomment"${i===0?' style="margin-top:18px;padding-top:0;border-top:none"':' style="margin-top:14px;padding-top:14px"'}>
         <div style="font-weight:600;color:var(--t2);margin-bottom:4px">${esc(s.q)}</div>
         <div>${pWrap(s.a)}</div>
       </div>`).join("")}
@@ -1368,18 +1564,34 @@ function expSummaryHTML(includeStats){
   const eqPointsJSON=JSON.stringify(equityPoints(en));
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Trading Journal Summary — ${periodLabel}</title>
+<${""}script>(function(){try{var t=localStorage.getItem("wss_theme")||"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();<\/script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --t:#f0efe9;--t2:#b7b5ad;--t3:#8b8a83;--bd:rgba(255,255,255,0.09);--bdm:rgba(255,255,255,0.16);--surface:#1b1b1e;--s2:rgba(255,255,255,0.045);
+  color-scheme:light;
+  --bg:#f7f6f3;--surface:#ffffff;--s1:rgba(100,100,92,0.035);--s2:rgba(120,120,110,0.06);--s3:rgba(100,100,92,0.09);
+  --t:#1c1c1a;--t2:#615f5a;--t3:#8b8a83;--bd:rgba(100,100,92,0.16);--bdm:rgba(100,100,92,0.30);
+  --g:#4E9269;--gbg:rgba(78,146,105,0.12);--gbd:rgba(78,146,105,0.32);
+  --r:#C97878;--rbg:rgba(201,120,120,0.12);--rbd:rgba(201,120,120,0.32);
+  --a:#BD9142;--abg:rgba(189,145,66,0.14);--abd:rgba(189,145,66,0.34);
+  --p:#8377C9;--pbg:rgba(131,119,201,0.14);--pbd:rgba(131,119,201,0.34);
+  --refhead:#7C9EB8;
+  --rad:8px;--radl:12px;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--mono:var(--sans);
+  --fxs:11px;--fsm:12px;--fbase:13px;--fmd:15px;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121214;--surface:#1b1b1e;--s1:rgba(255,255,255,0.03);--s2:rgba(255,255,255,0.045);--s3:rgba(255,255,255,0.06);
+  --t:#f0efe9;--t2:#b7b5ad;--t3:#8b8a83;--bd:rgba(255,255,255,0.09);--bdm:rgba(255,255,255,0.16);
   --g:#7FCBA0;--gbg:rgba(127,203,160,0.14);--gbd:rgba(127,203,160,0.34);
   --r:#E69A9A;--rbg:rgba(230,154,154,0.14);--rbd:rgba(230,154,154,0.34);
   --a:#E4BD7D;--abg:rgba(228,189,125,0.15);--abd:rgba(228,189,125,0.35);
   --p:#B4ABE8;--pbg:rgba(180,171,232,0.15);--pbd:rgba(180,171,232,0.35);
-  --rad:8px;--radl:12px;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--mono:var(--sans);
-  --fxs:11px;--fsm:12px;--fbase:13px;--fmd:15px;
+  --refhead:#E0AFC2;
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#121214;color:var(--t);padding:2rem 1.25rem 4rem;font-size:13px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t);padding:2rem 1.25rem 4rem;font-size:13px}
+.themetoggle{width:32px;height:32px;border-radius:50%;border:.5px solid var(--bdm);background:var(--surface);color:var(--t2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.themetoggle:hover{background:var(--s2)}
 .wrap{max-width:1152px;margin:0 auto}
 h1{font-size:22px;font-weight:600;margin-bottom:4px}
 .sub{font-size:13px;color:var(--t2);margin-bottom:1.75rem}
@@ -1387,7 +1599,7 @@ h1{font-size:22px;font-weight:600;margin-bottom:4px}
 .sgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .sgrid2x3{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media(max-width:640px){.sgrid{grid-template-columns:repeat(2,1fr)}.sgrid2x3{grid-template-columns:1fr 1fr}}
-.scard{background:rgba(255,255,255,0.045);border-radius:8px;padding:12px 14px;min-height:88px;display:flex;flex-direction:column}
+.scard{background:var(--s2);border-radius:8px;padding:12px 14px;min-height:88px;display:flex;flex-direction:column}
 .slabel{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
 .sval{font-size:19px;font-weight:700;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;white-space:normal;overflow-wrap:break-word;line-height:1.3;flex:1;display:flex;align-items:center;justify-content:center;text-align:center}
 .statsep{color:var(--t3);margin:0 6px;font-weight:400}
@@ -1401,12 +1613,12 @@ h1{font-size:22px;font-weight:600;margin-bottom:4px}
 .qcell .qn{font-size:20px;font-weight:700;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}
 .qcell .ql{font-size:11px;color:var(--t2);margin-top:2px}
 .qgw{background:var(--gbg)}.qgw .qn{color:var(--g)}
-.qgl{background:rgba(255,255,255,0.045)}
+.qgl{background:var(--s2)}
 .qbw{background:var(--abg)}.qbw .qn{color:var(--a)}
 .qbl{background:var(--rbg)}.qbl .qn{color:var(--r)}
 .qwarn{font-size:11px;color:var(--a);background:var(--abg);border:.5px solid rgba(228,189,125,0.34);border-radius:8px;padding:8px 10px;line-height:1.5}
 .dqok{font-size:11px;color:var(--t3)}
-.bpanel{background:rgba(255,255,255,0.045);border:.5px solid var(--bd);border-radius:12px;padding:1rem}
+.bpanel{background:var(--s2);border:.5px solid var(--bd);border-radius:12px;padding:1rem}
 .eq-panel-auto{display:flex;flex-direction:column;min-height:0}
 .eq-outer{position:relative;flex:1;min-height:140px}
 .eq-col-auto{display:flex;flex-direction:column;min-height:0}
@@ -1414,25 +1626,25 @@ h1{font-size:22px;font-weight:600;margin-bottom:4px}
 .rsrow:last-child{border-bottom:none}
 .rsname{color:var(--t2);flex:1}
 .rspct{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-weight:700;white-space:nowrap;text-align:right;min-width:40px}
-.rsbw{width:90px;height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;flex-shrink:0}
+.rsbw{width:90px;height:5px;background:var(--s3);border-radius:3px;overflow:hidden;flex-shrink:0}
 .rsbar{height:100%;border-radius:3px}
 .brow{display:grid;grid-template-columns:1fr 90px 42px;align-items:center;gap:10px;padding:6px 0;border-bottom:.5px solid var(--bd);font-size:12px}
 .brow:last-child{border-bottom:none}
 .browlabel{color:var(--t2)}
-.browbar{width:90px;height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
+.browbar{width:90px;height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
 .browfill{height:100%;border-radius:3px}
 .browpct{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-weight:700;text-align:right;white-space:nowrap}
 .losscat-item{margin-bottom:14px}
 .losscat-item:last-child{margin-bottom:0}
 .lcrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
 .lcname{font-size:12px;color:var(--t2)}
-.lcbarwrap{height:7px;background:rgba(255,255,255,0.06);border:.5px solid var(--bd);border-radius:4px;overflow:hidden}
+.lcbarwrap{height:7px;background:var(--s3);border:.5px solid var(--bd);border-radius:4px;overflow:hidden}
 .lcbar{height:100%;border-radius:4px}
 .lcmeta{font-size:11px;font-weight:700;text-align:right;white-space:nowrap;flex-shrink:0}
-.tcard{background:rgba(255,255,255,0.03);border:.5px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.tcard{background:var(--s1);border:.5px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:10px}
 .thead2{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;margin-bottom:4px}
 .tmeta{font-size:11px;color:var(--t3);line-height:1.5}
-.tcomment{font-size:12px;color:#d5d3cb;margin-top:8px;padding-top:8px;border-top:.5px solid var(--bd);line-height:1.5}
+.tcomment{font-size:12px;color:var(--t2);margin-top:8px;padding-top:8px;border-top:.5px solid var(--bd);line-height:1.5}
 .tshots{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .tshots img{max-width:220px;border-radius:8px;border:.5px solid var(--bd);cursor:zoom-in;transition:opacity .15s}
 .tshots img:hover{opacity:.85}
@@ -1442,10 +1654,10 @@ h1{font-size:22px;font-weight:600;margin-bottom:4px}
 .caldow{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;text-align:center;padding-bottom:2px}
 .calcell{min-height:56px;border-radius:8px;border:.5px solid var(--bd);padding:6px 7px;display:flex;flex-direction:column;justify-content:space-between;font-size:10px}
 .calcell.empty{border:none;background:none}
-.calcell.neutral{background:rgba(255,255,255,0.03)}
+.calcell.neutral{background:var(--s1)}
 .calcell.win{background:var(--gbg);border-color:rgba(127,203,160,0.34)}
 .calcell.loss{background:var(--rbg);border-color:rgba(230,154,154,0.34)}
-.calcell.total{background:rgba(255,255,255,0.03);border-style:dashed}
+.calcell.total{background:var(--s1);border-style:dashed}
 .caldate{font-weight:700;color:var(--t2);font-size:10px}
 .calpnl{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-weight:700;font-size:12px;white-space:nowrap}
 .calcnt{font-size:9px;color:var(--t3)}
@@ -1507,8 +1719,13 @@ details.statsdetails[open]>summary:before{content:"▾ "}
 @media print{body{background:#fff;color:#111}.scard,.bpanel,.tcard{background:#f5f5f3;border-color:#ddd}}
 </style></head>
 <body><div class="wrap">
-<h1>J. — Trading Journal Summary</h1>
-<p class="sub">${periodLabel} · generated ${genDate}</p>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+  <div>
+    <h1>J. — Trading Journal Summary</h1>
+    <p class="sub">${periodLabel} · generated ${genDate}</p>
+  </div>
+  <button class="themetoggle" id="exp-theme-btn" onclick="expToggleTheme()" title="toggle theme">🌙</button>
+</div>
 ${includeStats?`<details class="statsdetails" id="stats-details">
 <summary class="seclab" style="margin:0 0 10px">stats</summary>
 <div class="rowSplit" style="margin-bottom:6px">
@@ -1541,6 +1758,13 @@ ${reflectionCards||`<div class="empty2">no reflections in this period</div>`}
 </div>
 <div class="lbox" id="lbox" onclick="closeLB()"><img id="lbox-img" src=""/></div>
 <${""}script>
+function expToggleTheme(){
+  var cur=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",cur);
+  try{localStorage.setItem("wss_theme",cur);}catch(e){}
+  var b=document.getElementById("exp-theme-btn");if(b)b.textContent=cur==="dark"?"☀️":"🌙";
+}
+(function(){var b=document.getElementById("exp-theme-btn");if(b)b.textContent=document.documentElement.getAttribute("data-theme")==="dark"?"☀️":"🌙";})();
 var EQ_POINTS=${eqPointsJSON};
 function openLB(src){document.getElementById("lbox-img").src=src;document.getElementById("lbox").classList.add("show");}
 function closeLB(){document.getElementById("lbox").classList.remove("show");document.getElementById("lbox-img").src="";}
@@ -1801,7 +2025,7 @@ function buildEqSVG(points,w,h){
     tickLines+lineEls+xTicks+
     '<circle cx="'+lastC[0].toFixed(1)+'" cy="'+lastC[1].toFixed(1)+'" r="3.5" fill="'+lastColor+'"/>'+
     '<line class="eq-cross" x1="0" y1="'+padT+'" x2="0" y2="'+(h-padB)+'" stroke="var(--t3)" stroke-width="1" stroke-dasharray="2,2" opacity="0"/>'+
-    '<circle class="eq-dot" cx="0" cy="0" r="4" fill="var(--t)" stroke="var(--bg,#121214)" stroke-width="1.5" opacity="0"/>'+
+    '<circle class="eq-dot" cx="0" cy="0" r="4" fill="var(--t)" stroke="var(--bg)" stroke-width="1.5" opacity="0"/>'+
     '<rect class="eq-hitrect" x="'+padL+'" y="0" width="'+plotW+'" height="'+h+'" fill="transparent" style="cursor:crosshair"/>'+
   '</svg>'+
   '<div class="eq-tip" style="position:absolute;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--surface);border:.5px solid var(--bdm);border-radius:6px;padding:5px 9px;font-size:11px;color:var(--t);white-space:nowrap;transform:translate(-50%,-125%);z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.18)"></div>'+
@@ -1970,26 +2194,31 @@ ${violCount>0
 function periodBarH(filteredCount,totalCount){
   const r=periodRange();
   return`<div class="periodbar">
-  <div class="pbmodes">
-    <button class="pbtn${periodMode==="all"?" on":""}" onclick="setPeriod('all')">All</button>
-    <button class="pbtn${periodMode==="week"?" on":""}" onclick="setPeriod('week')">Week</button>
-    <button class="pbtn${periodMode==="month"?" on":""}" onclick="setPeriod('month')">Month</button>
-    <button class="pbtn${periodMode==="custom"?" on":""}" onclick="setPeriod('custom')">Custom</button>
+  <div class="pbtop">
+    <div class="pbmodes">
+      <button class="pbtn${periodMode==="all"?" on":""}" onclick="setPeriod('all')">All</button>
+      <span class="pbsep">|</span>
+      <button class="pbtn${periodMode==="week"?" on":""}" onclick="setPeriod('week')">Week</button>
+      <span class="pbsep">|</span>
+      <button class="pbtn${periodMode==="month"?" on":""}" onclick="setPeriod('month')">Month</button>
+      <span class="pbsep">|</span>
+      <button class="pbtn${periodMode==="custom"?" on":""}" onclick="setPeriod('custom')">Custom</button>
+    </div>
+    <span class="pbcount">${filteredCount} of ${totalCount} trade${totalCount!==1?"s":""}${periodMode!=="all"?" in view":""}</span>
   </div>
   ${(periodMode==="week"||periodMode==="month")?`
   <div class="pbnav">
-    <button class="pbarrow" onclick="shiftPeriod(-1)">‹</button>
+    <span class="pbarrow" onclick="shiftPeriod(-1)">‹</span>
     <span class="pblabel">${r?r.label:""}</span>
-    <button class="pbarrow" onclick="shiftPeriod(1)">›</button>
+    <span class="pbarrow" onclick="shiftPeriod(1)">›</span>
     ${!isCurrentPeriod()?`<button class="pbtoday" onclick="jumpToday()">${periodMode==="week"?"this week":"this month"}</button>`:""}
   </div>`:""}
   ${periodMode==="custom"?`
   <div class="pbcustom">
     <input type="date" id="pb-from" value="${customFrom}" onchange="setCustomRange()"/>
-    <span style="color:var(--t3);font-size:var(--fsm)">to</span>
+    <span style="color:var(--t3);font-size:var(--fxs)">to</span>
     <input type="date" id="pb-to" value="${customTo}" onchange="setCustomRange()"/>
   </div>`:""}
-  <span class="pbcount">${filteredCount} of ${totalCount} trade${totalCount!==1?"s":""}${periodMode!=="all"?" in view":""}</span>
 </div>`;
 }
 
@@ -2047,25 +2276,29 @@ function render(){
   <div>
     <p class="brand">J.</p>
     <h1>trading journal</h1>
-    <p class="sub">track your edge · own your execution</p>
   </div>
-  <button class="themetoggle" onclick="toggleTheme()" title="toggle theme">${isDark?"☀️":"🌙"}</button>
+  <div class="topbaracts">
+    <div class="drivebar">
+      <button id="drive-connect-btn" class="btn" style="display:${driveConnected?"none":""}" onclick="connectDrive()">🔗 connect google drive</button>
+      <span id="drive-status">${driveStatusHtml()}</span>
+    </div>
+    <div class="bacts bacts-slim">
+      <button class="btn" onclick="impData()">↑ import</button>
+      <button class="btn" onclick="expData()">↓ full backup (.json)</button>
+      <button class="btn" onclick="expCSV()">↓ export view (.csv)</button>
+      <button class="btn btng" onclick="openExportOptions()">↓ share summary (.html)</button>
+    </div>
+    <button class="themetoggle" onclick="toggleTheme()" title="toggle theme">${isDark?"☀️":"🌙"}</button>
+  </div>
 </div>
-<div class="banner">
-  <span><strong>${trades.length}</strong> trades saved in your browser <span class="storagebar" style="color:${stCol}">· ≈${st.mb.toFixed(2)}MB used${st.mb>3?" — back up soon, browsers usually cap around 5–10MB":""}</span></span>
-  <div class="bacts">
-    <button class="btn" onclick="impData()">↑ import</button>
-    <button class="btn" onclick="expData()">↓ full backup (.json)</button>
-    <button class="btn" onclick="expCSV()">↓ export view (.csv)</button>
-    <button class="btn btng" onclick="openExportOptions()">↓ share summary (.html)</button>
-  </div>
+<div class="tabs">
+  <button class="tab tab-log${tab==="log"?" on":""}" onclick="setTab('log')">trade log</button>
+  <span class="tabsep">|</span>
+  <button class="tab tab-dashboard${tab==="dashboard"?" on":""}" onclick="setTab('dashboard')">dashboard</button>
+  <span class="tabsep">|</span>
+  <button class="tab tab-reflection${tab==="reflection"?" on":""}" onclick="setTab('reflection')">reflection</button>
 </div>
 ${periodBarH(filtered.length,trades.length)}
-<div class="tabs">
-  <button class="tab${tab==="log"?" on":""}" onclick="setTab('log')">trade log</button>
-  <button class="tab${tab==="dashboard"?" on":""}" onclick="setTab('dashboard')">dashboard</button>
-  <button class="tab${tab==="reflection"?" on":""}" onclick="setTab('reflection')">reflection</button>
-</div>
 ${tab==="log"?logH(en):tab==="dashboard"?dashH(s,en,ec,bc,em):reflectionH()}
 </div>`;
   if(showForm){renderFillsSection();refreshRiskPreview();refreshRules();refreshDq();refreshScreenshots();}
@@ -2520,7 +2753,7 @@ ${showRefForm?`
       :`<div class="field"><label>month</label><input id="rf-monthdate" type="month" value="${refForm.periodDate.slice(0,7)}" onchange="updateRefPeriodDate()"/></div>`}
     <div class="field"><label>entry date</label><input id="rf-entrydate" type="date" value="${refForm.entryDate}" onchange="updateRefPeriodDate()"/></div>
   </div>
-  <div style="font-size:var(--fxs);color:var(--t3);font-weight:700;letter-spacing:.05em;margin-bottom:16px">${refHeaderLabel(refForm)}</div>
+  <div style="font-size:var(--fxs);color:var(--refhead);font-weight:700;letter-spacing:.05em;margin-bottom:16px">${refHeaderLabel(refForm)}</div>
   ${refForm.sections.map((s,i)=>`
   <div style="margin-bottom:12px">
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
@@ -2543,8 +2776,8 @@ ${reflections.length===0
     const secs=nonEmptySections(r);
     return `
 <div class="fcard" style="margin-bottom:10px">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-    <span style="font-size:var(--fsm);color:var(--t2);font-weight:700;letter-spacing:.03em">${refHeaderLabel(r)}</span>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+    <span style="font-size:var(--fsm);color:var(--refhead);font-weight:700;letter-spacing:.03em">${refHeaderLabel(r)}</span>
     <div style="display:flex;align-items:center;gap:12px">
       <span style="font-size:var(--fxs);color:var(--t3)">entry date: ${ddmmyy(parseYMD(r.entryDate))}</span>
       <div style="display:flex;gap:2px">
