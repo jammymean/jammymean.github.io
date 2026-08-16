@@ -366,6 +366,8 @@ let driveKnownModifiedTime=null;  // Drive's own modifiedTime for the appData fi
 let drivePendingSync=false;       // true when a save couldn't reach Drive (offline) and is waiting to retry
 let driveStaleConflict=false;     // true when a save was blocked because Drive has newer changes than what we last loaded
 let driveRetryTimer=null;
+const DRIVE_TOKEN_CACHE_KEY="wss_drive_token";
+let driveAutoConnectAttempted=false; // guards against attempting the on-load silent reconnect more than once
 
 // Futures contract specs — $/point drives leveraged risk/reward math.
 const TICKERS=[
@@ -496,6 +498,80 @@ function renderDriveStatus(){
   const el=document.getElementById("drive-status");
   if(el)el.innerHTML=driveStatusHtml();
 }
+// ── Drive access-token caching — avoids re-showing the Connect button on
+// every page refresh. GIS access tokens live ~1hr; we cache the token + its
+// expiry so a reload can reuse it directly while still valid, or fall back
+// to a silent (no-popup) re-auth if it's expired but the browser still has
+// an active Google session from a prior connect.
+function cacheDriveToken(token,expiresInSeconds){
+  try{
+    const expiresAt=Date.now()+((expiresInSeconds||3600)*1000);
+    localStorage.setItem(DRIVE_TOKEN_CACHE_KEY,JSON.stringify({token,expiresAt}));
+  }catch(e){}
+}
+function getCachedDriveToken(){
+  try{
+    const raw=localStorage.getItem(DRIVE_TOKEN_CACHE_KEY);
+    if(!raw)return null;
+    const d=JSON.parse(raw);
+    if(!d||!d.token||!d.expiresAt)return null;
+    return d;
+  }catch(e){return null;}
+}
+function clearCachedDriveToken(){
+  try{localStorage.removeItem(DRIVE_TOKEN_CACHE_KEY);}catch(e){}
+}
+function waitForGis(maxWaitMs){
+  return new Promise((resolve)=>{
+    const start=Date.now();
+    (function check(){
+      if(typeof google!=="undefined"&&google.accounts&&google.accounts.oauth2){resolve(true);return;}
+      if(Date.now()-start>maxWaitMs){resolve(false);return;}
+      setTimeout(check,150);
+    })();
+  });
+}
+// Runs once on page load. Only does anything if this browser has connected
+// before (a cached token entry exists, valid or not) — someone who's never
+// connected still sees the plain Connect button, unchanged.
+async function attemptDriveAutoConnect(){
+  if(driveAutoConnectAttempted)return;
+  driveAutoConnectAttempted=true;
+  const cached=getCachedDriveToken();
+  if(!cached)return;
+  const ok=await waitForGis(4000);
+  if(!ok)return; // GIS script never loaded (blocked, offline, etc.) — Connect button still works manually
+  const stillValid=cached.expiresAt-60000>Date.now(); // 60s safety buffer before expiry
+  if(stillValid){
+    driveAccessToken=cached.token;
+    driveConnecting=true;renderDriveStatus();
+    driveSyncError="";
+    await driveConnectFlow();
+    if(driveConnected)return;
+    // Cached token turned out to be invalid despite looking unexpired (e.g. revoked
+    // externally) — clear the noisy error from that attempt and fall through to a
+    // silent re-auth instead of leaving an alarming message on screen.
+    driveSyncError="";
+  }
+  // Either expired, or the cached token didn't actually work — try a silent
+  // (no popup) re-auth. Succeeds if the browser still has an active Google
+  // session and prior consent; if not, fails quietly with no visible error,
+  // same as if the person had simply never connected.
+  const tc=ensureDriveTokenClient();
+  if(!tc)return;
+  driveConnecting=true;renderDriveStatus();
+  tc.callback=async(resp)=>{
+    if(resp.error){
+      driveConnecting=false;driveSyncError="";
+      renderDriveStatus();
+      return;
+    }
+    driveAccessToken=resp.access_token;
+    cacheDriveToken(resp.access_token,resp.expires_in);
+    await driveConnectFlow();
+  };
+  tc.requestAccessToken({prompt:"none"});
+}
 function ensureDriveTokenClient(){
   if(driveTokenClient)return driveTokenClient;
   if(typeof google==="undefined"||!google.accounts||!google.accounts.oauth2)return null;
@@ -517,6 +593,7 @@ function connectDrive(){
       return;
     }
     driveAccessToken=resp.access_token;
+    cacheDriveToken(resp.access_token,resp.expires_in);
     await driveConnectFlow();
   };
   tc.requestAccessToken({prompt:"consent"});
@@ -529,6 +606,8 @@ function disconnectDrive(){
   driveAppDataFileId=null;driveMirrorFileId=null;driveSyncError="";
   driveKnownModifiedTime=null;drivePendingSync=false;driveStaleConflict=false;
   clearDriveRetry();
+  clearCachedDriveToken();
+  driveAutoConnectAttempted=true; // an explicit disconnect should stick — don't silently reconnect on the next reload
   renderDriveStatus();
 }
 async function driveApiFetch(url,options){
@@ -1834,8 +1913,8 @@ ${includeStats?`<details class="statsdetails" id="stats-details">
     <div class="sgrid2x3">${statCards}</div>
   </div>
   <div class="eq-col-auto" id="exp-eq-col">
-    <p class="seclab" style="margin-top:0">equity curve</p>
     <div class="bpanel eq-panel-auto" id="exp-eq-panel" style="margin-bottom:0;flex:1">
+      <p class="seclab" style="margin:0 0 8px">equity curve</p>
       <div class="eq-outer" id="exp-eq-outer"></div>
     </div>
   </div>
@@ -2917,6 +2996,7 @@ ${reflections.length===0
 // ── Boot ──────────────────────────────────────────────────────────────────────
 load();
 render();
+attemptDriveAutoConnect();
 </script>
 </body>
 </html>
