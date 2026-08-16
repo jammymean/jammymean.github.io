@@ -429,6 +429,9 @@ let driveSaveInFlight=false;      // item 10 — true while a save's staleness-c
 let driveSaveQueued=false;        // item 10 — true when another save was requested mid-flight; coalesced into one fresh follow-up run
 let driveAbortController=null;    // manual hard-stop — the in-flight request's controller, if any
 let driveForceStopped=false;      // set right before aborting so the resulting fetch rejection doesn't surface as a scary error
+let driveWatchdogTimer=null;      // safety net — auto force-stops a connect/sync that never resolves (e.g. a silently-blocked
+                                   // Google prompt:"none" request), instead of spinning forever with no way out
+let driveSyncMenuOpen=false;      // dropdown shown when clicking the spinner mid-connect/sync — force stop + last synced
 const DRIVE_AUTO_BACKUP_KEY="wss_drive_last_backup"; // item 7
 const DRIVE_BACKUP_INTERVAL_DAYS=7;
 const DRIVE_BACKUP_PRUNE_DAYS=60;
@@ -580,8 +583,33 @@ function fmtSyncTime(iso){
   const mi=String(d.getMinutes()).padStart(2,"0");
   return `${dd} ${mon} ${yy}, ${hh}:${mi}`;
 }
+// Safety net for connect/sync attempts that never resolve — e.g. a Google
+// prompt:"none" token request that gets silently blocked (third-party cookies,
+// extensions, etc.) never calls its own callback, so nothing would otherwise
+// ever flip driveConnecting/driveSyncing back off. Without this the spinner
+// (and the dropdown behind it) can be stuck indefinitely. 20s is generous for
+// any real network round trip but short enough to never look "hung."
+function driveClearWatchdog(){if(driveWatchdogTimer){clearTimeout(driveWatchdogTimer);driveWatchdogTimer=null;}}
+function driveStartWatchdog(){
+  driveClearWatchdog();
+  driveWatchdogTimer=setTimeout(()=>{
+    driveWatchdogTimer=null;
+    if(!driveConnecting&&!driveSyncing)return; // resolved on its own in the meantime
+    driveForceStopped=true;
+    if(driveAbortController){try{driveAbortController.abort();}catch(e){}}
+    driveAbortController=null;
+    clearDriveRetry();
+    driveConnecting=false;driveSyncing=false;driveSaveInFlight=false;driveSaveQueued=false;
+    drivePendingSync=false;driveStaleConflict=false;driveSyncMenuOpen=false;
+    driveSyncError="connection timed out — click connect to try again";
+    render();
+  },20000);
+}
 function driveStatusHtml(){
-  if(driveConnecting||driveSyncing)return`<button class="topicon spin" onclick="driveForceStop()" title="${driveConnecting?"connecting…":"syncing…"} — hover and click to stop" data-tt="${driveConnecting?"connecting…":"syncing…"} (click to stop)"><span class="spin-ico">${DRIVE_SPIN_SVG}</span><span class="stop-ico">${ICON_X}</span></button>`;
+  if(driveConnecting||driveSyncing)return`<span class="drivemenu-wrap">
+    <button class="topicon spin" onclick="toggleDriveSyncMenu(event)" title="${driveConnecting?"connecting…":"syncing…"} — click for options" data-tt="${driveConnecting?"connecting…":"syncing…"} (click for options)"><span class="spin-ico">${DRIVE_SPIN_SVG}</span></button>
+    ${driveSyncMenuOpen?driveSyncMenuHtml():""}
+  </span>`;
   if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" title="newer changes were saved from another device — click to reload them" data-tt="newer changes saved elsewhere — click to reload">${ICON_WARN}</button>`;
   if(drivePendingSync)return`<span class="topicon warn" title="offline — your changes are saved locally and will sync automatically once you're back online" data-tt="offline — will sync automatically">${ICON_CLOCK}</span>`;
   if(driveSyncError)return`<span class="topicon err" title="${escAttr(driveSyncError)}" data-tt="${escAttr(driveSyncError)}">${DRIVE_ERR_SVG}</span>`;
@@ -613,10 +641,29 @@ function closeDriveMenu(){
   driveMenuOpen=false;
   renderDriveStatus();
 }
-document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen&&!logSearchLocked)closeLogSearch();if(refSearchOpen&&!refSearchLocked)closeRefSearch();});
+// Dropdown shown while connecting/syncing (behind the spinner) — same shape as
+// the connected-account menu, so force stop is available and last-synced is
+// still checkable without having to blindly abort first just to see it.
+function driveSyncMenuHtml(){
+  return`<div class="drivemenu" onclick="event.stopPropagation()">
+    <button class="drivemenu-row" style="color:var(--r)" onclick="driveForceStop()">${ICON_X} force stop</button>
+    <div class="drivemenu-synced">last synced: ${fmtSyncTime(driveKnownModifiedTime)}</div>
+  </div>`;
+}
+function toggleDriveSyncMenu(ev){
+  if(ev)ev.stopPropagation();
+  driveSyncMenuOpen=!driveSyncMenuOpen;
+  renderDriveStatus();
+}
+function closeDriveSyncMenu(){
+  if(!driveSyncMenuOpen)return;
+  driveSyncMenuOpen=false;
+  renderDriveStatus();
+}
+document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(driveSyncMenuOpen)closeDriveSyncMenu();if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen&&!logSearchLocked)closeLogSearch();if(refSearchOpen&&!refSearchLocked)closeRefSearch();});
 // Global Escape fallback — closes an open search even when focus has moved off the
 // input (e.g. a locked search, which intentionally survives outside clicks).
-document.addEventListener("keydown",(ev)=>{if(ev.key==="Escape"){if(logSearchOpen)closeLogSearch();if(refSearchOpen)closeRefSearch();}});
+document.addEventListener("keydown",(ev)=>{if(ev.key==="Escape"){if(logSearchOpen)closeLogSearch();if(refSearchOpen)closeRefSearch();if(driveSyncMenuOpen)closeDriveSyncMenu();}});
 async function driveFetchUserEmail(){
   try{
     const res=await driveApiFetch("https://www.googleapis.com/oauth2/v3/userinfo");
@@ -678,6 +725,7 @@ async function attemptDriveAutoConnect(){
     driveTokenExpiresAt=cached.expiresAt; // item 9 — reusing the cache, not calling cacheDriveToken(), so set this explicitly
     driveConnecting=true;renderDriveStatus();
     driveSyncError="";
+    driveStartWatchdog();
     await driveConnectFlow();
     if(driveConnected)return;
     // Cached token turned out to be invalid despite looking unexpired (e.g. revoked
@@ -692,8 +740,13 @@ async function attemptDriveAutoConnect(){
   const tc=ensureDriveTokenClient();
   if(!tc)return;
   driveConnecting=true;renderDriveStatus();
+  driveStartWatchdog(); // this prompt:"none" call can be silently swallowed by the
+                         // browser (blocked third-party cookies, etc.) and never
+                         // call back at all — without this, that leaves the spinner
+                         // stuck forever with no way to recover but a hard refresh.
   tc.callback=async(resp)=>{
     if(driveForceStopped)return; // user hit stop while this was still waiting on Google — discard the late response
+    driveClearWatchdog();
     if(resp.error){
       driveConnecting=false;driveSyncError="";
       renderDriveStatus();
@@ -818,13 +871,14 @@ function driveForceStop(){
   // Manual hard-stop for a sync/connect that's stuck — cancels whatever request
   // is actually in flight and snaps every busy flag back to idle, with no error
   // banner (this was a deliberate stop, not a failure).
+  driveClearWatchdog();
   driveForceStopped=true;
   if(driveAbortController){try{driveAbortController.abort();}catch(e){}}
   driveAbortController=null;
   clearDriveRetry();
   if(driveRefreshTimer){clearTimeout(driveRefreshTimer);driveRefreshTimer=null;}
   driveConnecting=false;driveSyncing=false;driveSaveInFlight=false;driveSaveQueued=false;
-  drivePendingSync=false;driveStaleConflict=false;driveSyncError="";driveMenuOpen=false;
+  drivePendingSync=false;driveStaleConflict=false;driveSyncError="";driveMenuOpen=false;driveSyncMenuOpen=false;
   render();
 }
 async function driveApiFetch(url,options){
