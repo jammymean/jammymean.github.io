@@ -227,7 +227,7 @@ td{padding:10px;vertical-align:middle;white-space:nowrap}
 .svalbarfill{height:100%;border-radius:3px;transition:width .3s}
 .pbody{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;width:100%}
 .setuprow .pbody .sval{flex:0 1 auto}
-.setuprow .svalsub{margin-top:1px}
+.setuprow .svalsub{margin-top:6px}
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:1.25rem}
 .row2col{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:1.25rem}
 .row2colEq{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem}
@@ -344,7 +344,7 @@ textarea:focus{border-color:var(--t3)}
 .filterclear svg{width:14px;height:14px;display:block}
 .lbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding:0 3px;flex-wrap:wrap;gap:8px}
 .logbaricons{display:inline-flex;align-items:center;gap:9px;margin-left:auto}
-.searchwrap{display:inline-flex;align-items:center}
+.searchwrap{display:inline-flex;align-items:center;gap:6px}
 .searchpill{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:3px 7px;border:.5px solid var(--tabdashbd);background:var(--tabdashbg);color:var(--tabdash)}
 .searchpill svg{width:14px;height:14px;flex-shrink:0}
 .searchpill input{background:none;border:none;outline:none;font-family:var(--sans);font-size:var(--fbase);color:var(--t);width:130px}
@@ -846,11 +846,17 @@ function switchDriveAccount(){
   };
   tc.requestAccessToken({prompt:"select_account"});
 }
-function disconnectDrive(){
+// Full state teardown shared by disconnect and force-stop: revokes the token,
+// clears every piece of connection state (in-memory and cached), and marks
+// auto-connect as already-attempted so nothing silently retries afterward.
+// The next explicit connect (a real relogin) runs the normal connect flow
+// from scratch, which re-establishes token refresh / stay-logged-in on its
+// own — this teardown doesn't need to special-case that.
+function driveFullTeardown(){
   if(driveAccessToken&&typeof google!=="undefined"&&google.accounts&&google.accounts.oauth2){
-    google.accounts.oauth2.revoke(driveAccessToken,()=>{});
+    try{google.accounts.oauth2.revoke(driveAccessToken,()=>{});}catch(e){}
   }
-  driveAccessToken=null;driveConnected=false;driveConnecting=false;
+  driveAccessToken=null;driveConnected=false;driveConnecting=false;driveSyncing=false;
   driveAppDataFileId=null;driveMirrorFileId=null;driveSyncError="";
   driveKnownModifiedTime=null;drivePendingSync=false;driveStaleConflict=false;
   driveMenuOpen=false;driveUserEmail=null;                    // item 6
@@ -859,7 +865,10 @@ function disconnectDrive(){
   driveSaveInFlight=false;driveSaveQueued=false;                // item 10
   clearDriveRetry();
   clearCachedDriveToken();
-  driveAutoConnectAttempted=true; // an explicit disconnect should stick — don't silently reconnect on the next reload
+  driveAutoConnectAttempted=true; // an explicit disconnect/force-stop should stick — don't silently reconnect on the next reload
+}
+function disconnectDrive(){
+  driveFullTeardown();
   renderDriveStatus();
 }
 function driveBeginAttempt(){
@@ -869,16 +878,14 @@ function driveBeginAttempt(){
 }
 function driveForceStop(){
   // Manual hard-stop for a sync/connect that's stuck — cancels whatever request
-  // is actually in flight and snaps every busy flag back to idle, with no error
-  // banner (this was a deliberate stop, not a failure).
+  // is actually in flight, then does a full teardown (same end state as an
+  // explicit disconnect) so nothing keeps retrying or lingering in the
+  // background. No error banner: this was a deliberate stop, not a failure.
   driveClearWatchdog();
   driveForceStopped=true;
   if(driveAbortController){try{driveAbortController.abort();}catch(e){}}
   driveAbortController=null;
-  clearDriveRetry();
-  if(driveRefreshTimer){clearTimeout(driveRefreshTimer);driveRefreshTimer=null;}
-  driveConnecting=false;driveSyncing=false;driveSaveInFlight=false;driveSaveQueued=false;
-  drivePendingSync=false;driveStaleConflict=false;driveSyncError="";driveMenuOpen=false;
+  driveFullTeardown();
   render();
 }
 async function driveApiFetch(url,options){
@@ -3473,16 +3480,18 @@ ${s.dqStats.filter(d=>d.total>0).map(d=>`<div class="rsrow"><span class="rsname"
 </div>
 
 ${en.length>0?`
-<p class="seclab">setup breakdown</p>
+<p class="seclab" style="display:flex;justify-content:space-between;align-items:center">
+  <span>setup breakdown</span>
+  <span class="seclab" style="margin:0">streak</span>
+</p>
 <div class="setuprow">
 ${SETUPS.map(setup=>{
   const ts=en.filter(t=>t.setup===setup),ws=ts.filter(t=>t.wl==="Win"),ls=ts.filter(t=>t.wl==="Loss"),wr=(ws.length+ls.length)>0?ws.length/(ws.length+ls.length):null;
   const c=wr===null?"var(--t3)":wr>=.5?"var(--g)":"var(--r)";
-  return`<div class="setupcard"><div class="slabel">${setup}</div><div class="pbody"><div class="sval" style="color:${c}">${wr!==null?pc(wr):"—"}</div><div class="svalsub" style="font-weight:300;font-style:italic">${ts.length} trade${ts.length!==1?"s":""}</div></div></div>`;
+  return`<div class="setupcard"><div class="slabel">${setup}</div><div class="pbody"><div class="sval" style="color:${c}">${wr!==null?pc(wr):"—"}</div><div class="svalsub" style="font-weight:300;font-style:italic">(${ts.length} trade${ts.length!==1?"s":""})</div></div></div>`;
 }).join("")}
 <div class="setupcard"><div class="slabel">Avg Hold Time</div><div class="pbody"><div class="sval">${s.adur!==null?fdur(s.adur):"—"}</div></div></div>
 <div class="setupcard streakcard">
-  <div class="slabel">streak</div>
   <div class="rsrow" style="padding:4px 0"><span class="rsname">Current</span><span class="rspct" style="color:${curCol}">${curLbl}</span></div>
   <div class="rsrow" style="padding:4px 0"><span class="rsname">Max Win</span><span class="rspct" style="color:var(--g)">${st.maxWin||"—"}</span></div>
   <div class="rsrow" style="padding:4px 0;border-bottom:none"><span class="rsname">Max Loss</span><span class="rspct" style="color:var(--r)">${st.maxLoss||"—"}</span></div>
