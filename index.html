@@ -381,6 +381,8 @@ let driveMenuOpen=false;          // item 6 — connected-account dropdown open/
 let driveUserEmail=null;          // item 6 — filled in after connect via the userinfo.email scope
 const DRIVE_MIRROR_DIRTY_KEY="wss_drive_mirror_dirty";
 let driveMirrorDirty=false;       // item 3 — true when appData saved but the mirror write failed right after; retried standalone
+let driveSaveInFlight=false;      // item 10 — true while a save's staleness-check+write cycle is actually talking to Drive
+let driveSaveQueued=false;        // item 10 — true when another save was requested mid-flight; coalesced into one fresh follow-up run
 const DRIVE_AUTO_BACKUP_KEY="wss_drive_last_backup"; // item 7
 const DRIVE_BACKUP_INTERVAL_DAYS=7;
 const DRIVE_BACKUP_PRUNE_DAYS=60;
@@ -733,6 +735,7 @@ function disconnectDrive(){
   driveMenuOpen=false;driveUserEmail=null;                    // item 6
   driveTokenExpiresAt=0;clearDriveRefreshTimer();              // item 9
   setMirrorDirty(false);                                       // item 3
+  driveSaveInFlight=false;driveSaveQueued=false;                // item 10
   clearDriveRetry();
   clearCachedDriveToken();
   driveAutoConnectAttempted=true; // an explicit disconnect should stick — don't silently reconnect on the next reload
@@ -901,11 +904,26 @@ async function retryMirrorWrite(){
 }
 async function driveSaveAll(){
   if(!driveConnected||!driveAccessToken)return;
+  // item 10 — concurrency guard. Without this, two rapid-fire saves (e.g.
+  // deleting two trades back to back) each start their own independent
+  // staleness-check + write cycle. Both checks can pass (neither sees the
+  // other's write yet), so both PUTs fire — and since a PUT fully replaces
+  // the file, whichever response happens to land LAST wins, even if it was
+  // sent first with a now-stale payload. That silently reverts the other
+  // save. Serializing here — at most one save in flight, with any change
+  // that arrives mid-save coalesced into a single fresh follow-up — closes
+  // the race entirely: the follow-up always reads trades/reflections/dq at
+  // the moment it actually runs, never a stale snapshot.
+  if(driveSaveInFlight){
+    driveSaveQueued=true;
+    return;
+  }
   if(!navigator.onLine){
     drivePendingSync=true;driveSyncError="";renderDriveStatus();
     scheduleDriveRetry();
     return;
   }
+  driveSaveInFlight=true;
   driveSyncing=true;renderDriveStatus();
   try{
     // Staleness check — if another device saved since we last loaded/saved,
@@ -914,6 +932,7 @@ async function driveSaveAll(){
       const current=await driveGetModifiedTime(driveAppDataFileId);
       if(current&&current!==driveKnownModifiedTime){
         driveSyncing=false;driveStaleConflict=true;driveSyncError="";
+        driveSaveInFlight=false;driveSaveQueued=false; // a real conflict means "reload latest" is the next step, not a silent retry
         renderDriveStatus();
         return;
       }
@@ -948,7 +967,16 @@ async function driveSaveAll(){
       driveSyncError="sync failed — saved locally only ("+msg+")";
     }
   }
+  driveSaveInFlight=false;
   driveSyncing=false;renderDriveStatus();
+  // item 10 — if a save request came in while this one was running, run it
+  // now: this re-reads trades/reflections/dq fresh (not the payload captured
+  // above), so it always reflects everything that changed in the meantime,
+  // no matter how many edits stacked up while we were busy.
+  if(driveSaveQueued){
+    driveSaveQueued=false;
+    driveSaveAll();
+  }
 }
 // item 7 — weekly automatic Drive backup. Reuses the existing dated .json
 // export naming convention (ddmmyy(), same as the manual "export .json"
