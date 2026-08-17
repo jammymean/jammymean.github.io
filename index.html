@@ -584,6 +584,9 @@ const ICON_TRIRIGHT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
 const ICON_TRILEFT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M15 6l-9 6 9 6V6z"/></svg>`;
 const ICON_TRIDOWN=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6 9l6 9 6-9H6z"/></svg>`;
 const ICON_FILTER=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 4 20 4 14 12.5 14 19 10 21 10 12.5 4 4"/></svg>`;
+// Same line-icon style as every other topicon (viewBox 24x24, stroke-based, round caps/joins) —
+// classic "floppy disk" save glyph, used for the top-of-form save shortcut (see fcard header).
+const ICON_SAVE=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
 // item 4 — shared "DD MMM YY, HH:MM" (24hr) formatter for last-synced timestamps,
 // used in the connected-account dropdown here and (matching format, for consistency)
 // in viewer.html's last-synced text.
@@ -649,11 +652,22 @@ function driveStatusHtml(){
 // item 6 — the one fixed dropdown shared by every state above: email (only
 // shown here, never at rest on the topbar), retry, switch account, disconnect,
 // force stop (red), and last synced.
+// sanity-check fix (item 11) — "retry" and "switch account" both end in a
+// requestAccessToken() call on the one shared driveTokenClient, whose .callback
+// property gets overwritten by whichever call runs last. Offering either of
+// those while a connect/switch attempt is already waiting on Google let a
+// second popup stomp the first attempt's callback — the first attempt's
+// eventual response then gets misrouted into the second attempt's handler,
+// leaving driveConnecting/driveAttemptKind in a state neither attempt actually
+// produced. Hiding both while busy removes the entry point instead of trying
+// to reconcile the race after the fact; "disconnect" and "force stop" stay
+// available since both are now safe to press mid-attempt (see disconnectDrive()).
 function driveMenuHtml(){
+  const busy=driveConnecting||driveSyncing;
   return`<div class="drivemenu" onclick="event.stopPropagation()">
     <div class="drivemenu-email">${driveUserEmail?esc(driveUserEmail):"…"}</div>
-    <button class="drivemenu-row" onclick="driveRetry()">${DRIVE_SPIN_SVG} retry</button>
-    <button class="drivemenu-row" onclick="switchDriveAccount()">switch account</button>
+    ${busy?"":`<button class="drivemenu-row" onclick="driveRetry()">${DRIVE_SPIN_SVG} retry</button>
+    <button class="drivemenu-row" onclick="switchDriveAccount()">switch account</button>`}
     <button class="drivemenu-row" onclick="disconnectDrive()">disconnect</button>
     <button class="drivemenu-row" style="color:var(--r)" onclick="driveForceStop()">${ICON_X} force stop</button>
     <div class="drivemenu-synced">last synced: ${fmtSyncTime(driveKnownModifiedTime)}</div>
@@ -837,6 +851,14 @@ function scheduleDriveTokenRefresh(expiresAt){
 function silentDriveTokenRefresh(){
   driveRefreshTimer=null;
   if(!driveConnected)return; // disconnected since this was scheduled — nothing to refresh
+  // sanity-check fix (item 11) — same re-entry hazard as connectDrive()/switchDriveAccount():
+  // this also points the shared driveTokenClient's .callback at itself before calling
+  // requestAccessToken(). If a manual connect/switch happens to be in flight at the exact
+  // moment this 5-min-early timer fires, don't clobber it — just skip this cycle. The token
+  // isn't actually expired yet (5 min of margin), and if the manual attempt succeeds it
+  // reschedules this refresh anyway via driveConnectFlow(); if not, the existing 401
+  // fallback (noted below) still catches it.
+  if(driveConnecting||driveSyncing)return;
   const tc=ensureDriveTokenClient();
   if(!tc)return; // GIS unavailable right now — falls through to the existing
                   // failure surface: the next Drive call with the stale token
@@ -855,7 +877,18 @@ function silentDriveTokenRefresh(){
   };
   tc.requestAccessToken({prompt:"none"});
 }
+// sanity-check fix (item 11) — re-entry guard. connectDrive/switchDriveAccount/
+// silentDriveTokenRefresh all point the SAME shared driveTokenClient's
+// .callback at their own handler right before calling requestAccessToken().
+// If a second call landed while a first was still waiting on Google, it would
+// silently overwrite that .callback — so the first popup's eventual response
+// fires the SECOND attempt's handler instead of its own, misrouting state
+// (wrong driveAttemptKind, a watchdog armed for the wrong attempt, etc.).
+// driveMenuHtml() already hides the buttons that could trigger this from the
+// UI while busy; this bails out defensively even if something else calls in
+// (e.g. a future code path, or two rapid clicks before the DOM re-renders).
 function connectDrive(){
+  if(driveConnecting||driveSyncing)return;
   const tc=ensureDriveTokenClient();
   if(!tc){
     alert("Google sign-in is still loading — wait a second and click Connect again.");
@@ -890,6 +923,7 @@ function connectDrive(){
 // Google account (a different account's appData/mirror files are separate,
 // created fresh the first time) — no special-casing needed for that.
 function switchDriveAccount(){
+  if(driveConnecting||driveSyncing)return; // see connectDrive() — same re-entry guard
   closeDriveMenu();
   const tc=ensureDriveTokenClient();
   if(!tc){
@@ -940,7 +974,23 @@ function driveFullTeardown(){
   clearCachedDriveToken();
   driveAutoConnectAttempted=true; // an explicit disconnect/force-stop should stick — don't silently reconnect on the next reload
 }
+// sanity-check fix (item 11) — root cause of a "phantom reconnect": disconnectDrive()
+// used to only call driveFullTeardown(), which never touched driveForceStopped.
+// If a connect/switch attempt was still waiting on Google when disconnect was
+// pressed, that pending tc.callback checks ONLY driveForceStopped (see
+// connectDrive()/switchDriveAccount() above) — since disconnect never set it,
+// the stray callback would later fire for real, plant a fresh access token, and
+// call driveConnectFlow(), silently re-establishing the exact connection the
+// person just explicitly ended. This mirrors what driveForceStop() already does
+// for the in-flight-request case, so "disconnect" is now safe to press at any
+// point, not just once a connect has already settled.
 function disconnectDrive(){
+  if(driveConnecting){
+    driveClearWatchdog();
+    driveForceStopped=true;
+    if(driveAbortController){try{driveAbortController.abort();}catch(e){}}
+    driveAbortController=null;
+  }
   driveFullTeardown();
   renderDriveStatus();
 }
@@ -2193,8 +2243,8 @@ function expSummaryHTML(includeStats){
   }).join("");
   const dqRows=`<div class="plbl" style="margin-bottom:14px">disqualifiers <span style="text-transform:none;color:var(--t3);letter-spacing:0"> — what would your P&L look like without these?</span></div>
     <div class="dgrid" style="grid-template-columns:1fr 1fr;margin-bottom:16px">
-      <div style="padding:14px 14px 4px"><div class="slabel">clean (${s.cleanTrades})</div><div class="sval" style="color:${s.cleanPnl>=0?"var(--g)":"var(--r)"}">${cu(s.cleanPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px">${s.cleanW}W ${cu(s.cleanGrossWin)} · ${s.cleanL}L ${cu(s.cleanGrossLoss)}</div></div>
-      <div style="padding:14px 14px 4px"><div class="slabel">violated (${s.violTrades})</div><div class="sval" style="color:${s.violPnl>=0?"var(--g)":"var(--r)"}">${cu(s.violPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px">${s.violW}W ${cu(s.violGrossWin)} · ${s.violL}L ${cu(s.violGrossLoss)}</div></div>
+      <div style="padding:14px 14px 4px"><div class="slabel" style="font-size:var(--fxs)">clean (${s.cleanTrades})</div><div class="sval" style="color:${s.cleanPnl>=0?"var(--g)":"var(--r)"}">${cu(s.cleanPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px;text-align:center">${s.cleanW}W ${cu(s.cleanGrossWin)} · ${s.cleanL}L ${cu(s.cleanGrossLoss)}</div></div>
+      <div style="padding:14px 14px 4px"><div class="slabel" style="font-size:var(--fxs)">violated (${s.violTrades})</div><div class="sval" style="color:${s.violPnl>=0?"var(--g)":"var(--r)"}">${cu(s.violPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px;text-align:center">${s.violW}W ${cu(s.violGrossWin)} · ${s.violL}L ${cu(s.violGrossLoss)}</div></div>
     </div>
     ${s.violTrades>0?`<div class="qwarn" style="margin:0 0 16px">Removing violated trades would change P&L by ${cu(-s.violPnl)}.</div>`:`<div class="dqok" style="margin:0 0 16px">no disqualifier violations logged yet</div>`}
     ${dqRowsList?`<div>${dqRowsList}</div>`:""}`;
@@ -3329,7 +3379,7 @@ function renderFilterBtn(key,allLabel,opts,list){
     curLabel=`${match?match.label:cur[0]} +${cur.length-1}`;
   }
   return`<div class="filterdd-wrap">
-    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" aria-label="filter by ${allLabel.replace('all ',"")}" data-tt="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
+    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" aria-label="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
     ${open?`<div class="filterdd" onclick="event.stopPropagation()">
       <button class="filterdd-row" onclick="clearOneLogFilter('${key}',event)">${allLabel}</button>
       ${opts.map(o=>`<label class="filterdd-row filterdd-check"><input type="checkbox" ${cur.includes(o.val)?"checked":""} onchange="toggleLogFilterValue('${key}','${o.val}',event)"/><span class="filterdd-label">${esc(o.label)}</span><span class="filterdd-count">(${list?countForFilterOption(key,o.val,list):0})</span></label>`).join("")}
@@ -3504,7 +3554,7 @@ function logH(en){
 <div class="logfilterbar">
   ${trades.length>0?`
   <button class="topicon" onclick="toggleExpandAll()" aria-label="${anyExpanded?"collapse all":"expand all"}" data-tt="${anyExpanded?"collapse all":"expand all"}">${anyExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
-  <span class="topicon" style="cursor:default;margin-right:-4px" aria-label="filters" data-tt="filters">${ICON_FILTER}</span>
+  <span class="topicon" style="cursor:default;margin-right:-4px" aria-label="filters">${ICON_FILTER}</span>
   ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})),en)}
   <span class="iconsep">|</span>
   ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})),en)}
@@ -3514,7 +3564,7 @@ function logH(en){
   ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}],en)}
   <span class="iconsep">|</span>
   ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})),en)}
-  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" aria-label="clear all filters" data-tt="clear all filters">${ICON_X}</button>`:""}
+  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" aria-label="clear all filters">${ICON_X}</button>`:""}
   `:""}
   <div class="logbaricons">
     <span class="searchwrap">
@@ -3532,7 +3582,10 @@ function logH(en){
 
 ${showForm?`
 <div class="fcard">
-  <div style="font-size:var(--fmd);font-weight:700;margin-bottom:1rem">${editingId!==null?"edit trade":"new trade entry"}</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+    <span style="font-size:var(--fmd);font-weight:700">${editingId!==null?"edit trade":"new trade entry"}</span>
+    <button class="topicon" onclick="addTrade()" aria-label="${editingId!==null?"save changes":"log trade"}" data-tt="${editingId!==null?"save changes":"log trade"}">${ICON_SAVE}</button>
+  </div>
   <div class="fsec" style="margin-top:0;padding-top:0;border-top:none">trade details</div>
   <div class="fgrid">
     <div class="field"><label>date</label><input id="fi-date" type="date" value="${form.date}"/></div>
@@ -3717,8 +3770,8 @@ ${calendarH(en,{collapsible:true,collapsed:calendarCollapsed,label:"calendar"})}
   <div class="bpanel" style="margin-bottom:0">
     <div class="plbl" style="margin-bottom:14px">disqualifiers <span style="text-transform:none;color:var(--t3);letter-spacing:0"> — what would your P&L look like without these?</span></div>
     <div class="dgrid" style="grid-template-columns:1fr 1fr;margin-bottom:16px">
-      <div style="padding:14px 14px 4px"><div class="slabel">clean (${s.cleanTrades})</div><div class="sval" style="color:${s.cleanPnl>=0?"var(--g)":"var(--r)"}">${cu(s.cleanPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px">${s.cleanW}W ${cu(s.cleanGrossWin)} · ${s.cleanL}L ${cu(s.cleanGrossLoss)}</div></div>
-      <div style="padding:14px 14px 4px"><div class="slabel">violated (${s.violTrades})</div><div class="sval" style="color:${s.violPnl>=0?"var(--g)":"var(--r)"}">${cu(s.violPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px">${s.violW}W ${cu(s.violGrossWin)} · ${s.violL}L ${cu(s.violGrossLoss)}</div></div>
+      <div style="padding:14px 14px 4px"><div class="slabel" style="font-size:var(--fxs)">clean (${s.cleanTrades})</div><div class="sval" style="color:${s.cleanPnl>=0?"var(--g)":"var(--r)"}">${cu(s.cleanPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px;text-align:center">${s.cleanW}W ${cu(s.cleanGrossWin)} · ${s.cleanL}L ${cu(s.cleanGrossLoss)}</div></div>
+      <div style="padding:14px 14px 4px"><div class="slabel" style="font-size:var(--fxs)">violated (${s.violTrades})</div><div class="sval" style="color:${s.violPnl>=0?"var(--g)":"var(--r)"}">${cu(s.violPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px;text-align:center">${s.violW}W ${cu(s.violGrossWin)} · ${s.violL}L ${cu(s.violGrossLoss)}</div></div>
     </div>
     ${s.violTrades>0?`<div class="qwarn" style="margin-bottom:16px">Removing violated trades would change P&L by ${cu(-s.violPnl)}.</div>`:`<div class="dqok" style="margin-bottom:16px">no disqualifier violations logged yet</div>`}
     ${s.dqStats.some(d=>d.total>0)?`<div>
