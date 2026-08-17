@@ -3,15 +3,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>trading journal</title>
-<!-- Favicon: hand-drawn / sketchy replica of the play-button reference icon.
-     Follows the BROWSER/OS's prefers-color-scheme, not the in-app manual theme toggle
-     (favicons can't read page JS state) — mauve (#A15B78) on light, powder pink (#E0AFC2) on dark. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23A15B78%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M12.1%202.6%20C16.9%202.4%2021.3%206.1%2021.4%2011.6%20C21.5%2016.9%2017.5%2021%2012.3%2021.4%20C7.4%2021.7%202.9%2017.8%202.6%2012.6%20C2.4%207.6%206.9%203%2012.1%202.6%20Z%27%20stroke-width%3D%271.4%27%20opacity%3D%270.55%27%2F%3E%3Cpath%20d%3D%27M12%203%20C16.8%202.9%2020.9%206.7%2021%2012%20C21.1%2017%2017.2%2020.9%2012.1%2021%20C7.3%2021.1%203%2017.3%203%2012%20C3%207.2%207.3%203.3%2012%203%20Z%27%20stroke-width%3D%271.6%27%2F%3E%3Cpath%20d%3D%27M9.9%207.6%20L16.6%2011.7%20L10.1%2016.5%20Z%27%20fill%3D%27%23A15B78%27%20fill-opacity%3D%270.92%27%20stroke-width%3D%271.3%27%2F%3E%3C%2Fsvg%3E" media="(prefers-color-scheme: light)"/>
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23E0AFC2%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M12.1%202.6%20C16.9%202.4%2021.3%206.1%2021.4%2011.6%20C21.5%2016.9%2017.5%2021%2012.3%2021.4%20C7.4%2021.7%202.9%2017.8%202.6%2012.6%20C2.4%207.6%206.9%203%2012.1%202.6%20Z%27%20stroke-width%3D%271.4%27%20opacity%3D%270.55%27%2F%3E%3Cpath%20d%3D%27M12%203%20C16.8%202.9%2020.9%206.7%2021%2012%20C21.1%2017%2017.2%2020.9%2012.1%2021%20C7.3%2021.1%203%2017.3%203%2012%20C3%207.2%207.3%203.3%2012%203%20Z%27%20stroke-width%3D%271.6%27%2F%3E%3Cpath%20d%3D%27M9.9%207.6%20L16.6%2011.7%20L10.1%2016.5%20Z%27%20fill%3D%27%23E0AFC2%27%20fill-opacity%3D%270.92%27%20stroke-width%3D%271.3%27%2F%3E%3C%2Fsvg%3E" media="(prefers-color-scheme: dark)"/>
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23E0AFC2%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M12.1%202.6%20C16.9%202.4%2021.3%206.1%2021.4%2011.6%20C21.5%2016.9%2017.5%2021%2012.3%2021.4%20C7.4%2021.7%202.9%2017.8%202.6%2012.6%20C2.4%207.6%206.9%203%2012.1%202.6%20Z%27%20stroke-width%3D%271.4%27%20opacity%3D%270.55%27%2F%3E%3Cpath%20d%3D%27M12%203%20C16.8%202.9%2020.9%206.7%2021%2012%20C21.1%2017%2017.2%2020.9%2012.1%2021%20C7.3%2021.1%203%2017.3%203%2012%20C3%207.2%207.3%203.3%2012%203%20Z%27%20stroke-width%3D%271.6%27%2F%3E%3Cpath%20d%3D%27M9.9%207.6%20L16.6%2011.7%20L10.1%2016.5%20Z%27%20fill%3D%27%23E0AFC2%27%20fill-opacity%3D%270.92%27%20stroke-width%3D%271.3%27%2F%3E%3C%2Fsvg%3E"/>
+<title>J.'s Trading Journal (v)</title>
+<link rel="icon" id="favicon" type="image/svg+xml" href=""/>
 <script>(function(){try{var t=localStorage.getItem("wss_theme")||"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();</script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -26,7 +20,7 @@
   --refhead:#7C9EB8;
   --tabdash:#A15B78;--tabdashbg:rgba(161,91,120,0.12);--tabdashbd:rgba(161,91,120,0.32);
   --tablr:#4F7691;--tablrbg:rgba(79,118,145,0.12);--tablrbd:rgba(79,118,145,0.32);
-  --tabdashbg-dd:#ECDEE4;--tablrbg-dd:#DCE4E9;
+  --mv:#B3677E;--mvbg:rgba(179,103,126,0.12);--mvbd:rgba(179,103,126,0.30);
   --pbsel:#A47DAB;--pbselbg:rgba(164,125,171,0.14);--pbselbd:rgba(164,125,171,0.34);
   --rad:8px;--radl:12px;
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
@@ -52,56 +46,32 @@
   --refhead:#E0AFC2;
   --tabdash:#A9C6DE;--tabdashbg:rgba(169,198,222,0.15);--tabdashbd:rgba(169,198,222,0.35);
   --tablr:#E0AFC2;--tablrbg:rgba(224,175,194,0.15);--tablrbd:rgba(224,175,194,0.35);
-  --tabdashbg-dd:#373D44;--tablrbg-dd:#423942;
+  --mv:#D9A0B4;--mvbg:rgba(217,160,180,0.14);--mvbd:rgba(217,160,180,0.32);
   --pbsel:#EDC8FF;--pbselbg:rgba(237,200,255,0.15);--pbselbd:rgba(237,200,255,0.35);
 }
 body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height:100vh;font-size:var(--fbase)}
-.topbaracts{display:flex;align-items:center;gap:14px}
+.readonly-mode [data-edit]{display:none!important}
+.robadge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;color:var(--mv);margin-left:8px;vertical-align:middle}
+.robadge svg{width:16px;height:16px;display:block}
+.topicon{height:16px;display:inline-flex;align-items:center;justify-content:center;gap:3px;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
+.topicon:hover{color:var(--t)}
+.topicon svg{width:16px;height:16px;display:block;flex-shrink:0}
+.topbaracts{display:flex;align-items:center;gap:10px}
+.bacts-slim{opacity:.65}
+.bacts-slim .btn{font-size:11px;font-weight:400;padding:5px 10px}
+.bacts-slim .btng{font-weight:400}
 #app{max-width:1152px;margin:0 auto;padding:2rem 1.25rem 4rem}
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:1.5rem}
 .brand{font-size:var(--fxs);color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
 h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .sub{font-size:var(--fbase);color:var(--t2);margin-bottom:1.75rem}
-.themetoggle{width:16px;height:16px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-/* Fast custom tooltip — shows immediately on hover via CSS rather than relying on
-   the native title attribute, whose browser-controlled delay made it feel like it
-   only worked "sometimes". aria-label is kept alongside data-tt as an accessible
-   fallback (screen readers only — it renders no visual popup of its own), so this
-   is the only visible tooltip; colored to match the dashboard/connected-icon
-   mauve (light) / powder-blue (dark) overlay instead of a plain black/white box. */
-[data-tt]{position:relative}
-[data-tt]::after{content:attr(data-tt);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--tabdashbg);color:var(--tabdash);border:.5px solid var(--tabdashbd);font-size:11px;font-weight:500;line-height:1.3;padding:5px 9px;border-radius:6px;white-space:nowrap;max-width:220px;opacity:0;pointer-events:none;transition:opacity .1s;z-index:80;box-shadow:0 4px 14px rgba(0,0,0,.22)}
-[data-tt]:hover::after{opacity:1;transition-delay:.15s}
+.themetoggle{width:32px;height:32px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .themetoggle:hover{opacity:.75}
-.themetoggle svg{width:16px;height:16px;display:block}
+.themetoggle svg{width:18px;height:18px;display:block}
 .banner{background:var(--s2);border:.5px solid var(--bd);border-radius:var(--radl);padding:10px 14px;margin-bottom:.9rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:var(--fbase);color:var(--t2)}
 .banner strong{color:var(--t)}
 .bacts{display:flex;gap:6px;flex-wrap:wrap}
 .storagebar{font-size:var(--fxs);color:var(--t3)}
-.topicons{display:inline-flex;align-items:center;gap:9px}
-.iconsep{color:var(--bdm);user-select:none;font-size:13px;line-height:1}
-.topicon{height:16px;display:inline-flex;align-items:center;justify-content:center;gap:3px;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
-.topicon:hover{color:var(--t)}
-.topicon svg{width:16px;height:16px;display:block;flex-shrink:0}
-.topicon.ok{color:var(--tabdash);background:var(--tabdashbg);border:.5px solid var(--tabdashbd);border-radius:6px;padding:2px 6px;height:auto;line-height:1}
-.topicon.ok:hover{color:var(--tabdash);opacity:.82}
-.topicon.err{color:var(--r)}
-.topicon.err:hover{color:var(--r)}
-.topicon.warn{color:var(--a)}
-.topicon.warn:hover{color:var(--a)}
-.topicon.spin{cursor:pointer;color:var(--t);position:relative;width:16px;height:16px;padding:0}
-.topicon.spin .spin-ico{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;animation:topiconspin .8s linear infinite;transition:opacity .12s}
-.topicon.spin .stop-ico{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s;color:var(--r)}
-.topicon.spin:hover .spin-ico{opacity:0}
-.topicon.spin:hover .stop-ico{opacity:1}
-@keyframes topiconspin{to{transform:rotate(360deg)}}
-.drivemenu-wrap{position:relative;display:inline-flex}
-.drivemenu{position:absolute;top:22px;right:0;min-width:210px;background:var(--tabdashbg-dd);border:.5px solid var(--tabdashbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px 0;z-index:50;text-align:left;cursor:default}
-.drivemenu-email{padding:2px 12px 8px;font-size:var(--fsm);color:var(--t2);border-bottom:.5px solid var(--tabdashbd);margin-bottom:4px;word-break:break-all}
-.drivemenu-row{display:flex;align-items:center;gap:6px;width:100%;text-align:left;padding:7px 12px;background:none;border:none;font-size:var(--fbase);color:var(--t);cursor:pointer;font-family:var(--sans)}
-.drivemenu-row:hover{background:var(--tabdashbd)}
-.drivemenu-row svg{width:14px;height:14px;flex-shrink:0;display:block}
-.drivemenu-synced{padding:6px 12px 2px;font-size:var(--fxs);color:var(--t3);text-align:right;border-top:.5px solid var(--tabdashbd);margin-top:4px;font-style:italic}
 /* Period bar */
 .periodbar{display:flex;flex-direction:column;margin-bottom:1.5rem}
 .pbrow{display:flex;align-items:center;justify-content:center;position:relative;padding:2px 0}
@@ -118,9 +88,9 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .pblabel{font-size:var(--fxs);font-weight:300;color:var(--t3);margin-right:6px}
 .pbtoday{font-size:var(--fxs);font-weight:300;color:var(--p);cursor:pointer;background:none;border:none;padding:0}
 .pbtoday:hover{opacity:.8}
-.pbcustom{display:flex;align-items:center;gap:6px;margin-left:9px}
+.pbcustom{display:flex;align-items:center;gap:6px;margin-top:5px;margin-left:9px}
 .pbcustom input{padding:5px 8px;font-size:var(--fxs);font-family:var(--sans);border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t)}
-.tabs{display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:.85rem}
+.tabs{display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:1.5rem}
 .tab{padding:6px 14px;border-radius:calc(var(--rad) - 1px);font-size:var(--fbase);font-family:var(--sans);cursor:pointer;border:.5px solid transparent;color:var(--t2);background:transparent;transition:all .15s}
 .tab.on{font-weight:600}
 .tab.on.tab-dashboard{background:var(--tabdashbg);color:var(--tabdash);border-color:var(--tabdashbd)}
@@ -183,6 +153,8 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .dqeditrow input:focus{border-color:var(--t3)}
 .dqok{font-size:var(--fxs);color:var(--t3);margin-top:6px}
 /* Table */
+.lbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px}
+.lcount{font-size:var(--fbase);color:var(--t2)}
 .lcountbottom{text-align:right;font-size:var(--fxs);font-weight:300;font-style:italic;color:var(--t3);margin-top:8px}
 .empty{text-align:center;padding:3.5rem 1rem;border:.5px solid var(--bd);border-radius:var(--radl);color:var(--t2);font-size:var(--fbase)}
 .twrap{overflow-x:auto;border:.5px solid var(--bd);border-radius:var(--radl)}
@@ -221,25 +193,22 @@ td{padding:10px;vertical-align:middle;white-space:nowrap}
 .mover{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:100;padding:1.5rem;cursor:zoom-out}
 .mover img{max-width:92vw;max-height:92vh;border-radius:10px;cursor:zoom-out}
 .sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:1.25rem}
-.scard{background:var(--s2);border-radius:var(--rad);padding:10px 14px;min-height:76px;display:flex;flex-direction:column}
-.slabel{font-size:calc(var(--fxs) - 2px);color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
-.sval{font-size:var(--fmd);font-weight:500;font-family:var(--mono);white-space:normal;overflow-wrap:break-word;line-height:1.3;flex:1;display:flex;align-items:center;justify-content:center;text-align:center}
+.scard{background:var(--s2);border-radius:var(--rad);padding:12px 14px;min-height:92px;display:flex;flex-direction:column}
+.slabel{font-size:var(--fxs);color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.sval{font-size:var(--flg);font-weight:700;font-family:var(--mono);white-space:normal;overflow-wrap:break-word;line-height:1.3;flex:1;display:flex;align-items:center;justify-content:center;text-align:center}
 .sval-hero{font-size:var(--flg);font-weight:700}
 .svalsub{font-size:calc(var(--fxs) - 1px);margin-top:2px;text-align:center;font-weight:400}
 .svalbar{width:100%;height:5px;background:var(--surface);border:.5px solid var(--bd);border-radius:3px;overflow:hidden;margin-bottom:6px}
 .svalbarfill{height:100%;border-radius:3px;transition:width .3s}
-.pbody{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;width:100%}
-.setuprow .pbody .sval{flex:0 1 auto}
-.setuprow .svalsub{margin-top:6px}
 .tightsub .pbody .sval{flex:0 1 auto}
 .tightsub .svalsub{margin-top:6px}
+.pbody{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;width:100%}
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:1.25rem}
 .row2col{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:1.25rem}
 .row2colEq{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem}
 .dashSplit{display:grid;grid-template-columns:3fr 2fr;gap:10px;margin-bottom:1.25rem;align-items:stretch}
 @media(max-width:760px){.row2col,.row2colEq,.dashSplit{grid-template-columns:1fr}}
 .statrow3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
-#dash-stat-col .statrow3:last-child{margin-bottom:0}
 .statrow12{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:8px}
 .statrow2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:0}
 @media(max-width:560px){.statrow3,.statrow12,.statrow2{grid-template-columns:1fr}}
@@ -270,9 +239,11 @@ td{padding:10px;vertical-align:middle;white-space:nowrap}
 .browpct{font-size:var(--fsm);font-weight:700;font-family:var(--mono);text-align:right;white-space:nowrap}
 /* Pipe separator for compact multi-value stat cards, e.g. "3 | 2W | 1L" */
 .statsep{color:var(--t3);margin:0 7px;font-weight:400}
-.setuprow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:stretch}
-.setupcard{flex:1;min-width:90px;background:var(--s2);border-radius:var(--rad);padding:10px 14px;min-height:76px;display:flex;flex-direction:column}
-.setupcard.streakcard{justify-content:flex-start;position:relative}
+.setuprow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem}
+.setupcard{flex:1;min-width:90px;background:var(--surface);border:.5px solid var(--bd);border-radius:var(--rad);padding:10px 12px}
+.setupname{font-size:var(--fbase);font-weight:600;margin-bottom:3px}
+.setuptrades{font-size:var(--fxs);color:var(--t2);margin-bottom:3px}
+.setupwr{font-size:var(--fmd);font-family:var(--mono);font-weight:700}
 .refcard{background:var(--s2);border:.5px solid var(--bd);border-radius:var(--radl);padding:1.1rem}
 .refq{font-size:var(--fbase);font-weight:600;margin-bottom:6px}
 textarea{width:100%;font-family:var(--sans);font-size:var(--fbase);padding:9px 11px;border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t);resize:vertical;line-height:1.6;outline:none;margin-bottom:12px}
@@ -337,19 +308,16 @@ textarea:focus{border-color:var(--t3)}
 .filterbtn:hover{color:var(--t)}
 .filterbtn.on{color:var(--tablr);background:var(--tablrbg);border-color:var(--tablrbd)}
 .filterdd-wrap{position:relative;display:inline-flex}
-.filterdd{position:absolute;top:30px;left:0;min-width:140px;width:max-content;max-width:280px;background:var(--tablrbg-dd);border:.5px solid var(--tablrbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;z-index:50;text-align:left;cursor:default}
-.filterdd-row{display:block;width:100%;text-align:left;padding:6px 12px;background:none;border:none;font-size:var(--fsm);color:var(--t);cursor:pointer;font-family:var(--sans);white-space:nowrap}
+.filterdd{position:absolute;top:30px;left:0;min-width:140px;background:var(--tablrbg);border:.5px solid var(--tablrbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;z-index:50;text-align:left;cursor:default}
+.filterdd-row{display:block;width:100%;text-align:left;padding:6px 12px;background:none;border:none;font-size:var(--fsm);color:var(--t);cursor:pointer;font-family:var(--sans)}
 .filterdd-row:hover{background:var(--tablrbd)}
-.filterdd-check{display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap}
-.filterdd-check input{cursor:pointer;accent-color:var(--tablr);flex-shrink:0}
-.filterdd-label{flex:1}
-.filterdd-count{margin-left:auto;flex-shrink:0;color:var(--t3)}
+.filterdd-check{display:flex;align-items:center;gap:8px;cursor:pointer}
+.filterdd-check input{cursor:pointer;accent-color:var(--tablr)}
 .filterclear{height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
 .filterclear:hover{color:var(--t)}
 .filterclear svg{width:14px;height:14px;display:block}
-.lbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding:0 3px;flex-wrap:wrap;gap:8px}
 .logbaricons{display:inline-flex;align-items:center;gap:9px;margin-left:auto}
-.searchwrap{display:inline-flex;align-items:center;gap:6px}
+.searchwrap{display:inline-flex;align-items:center}
 .searchpill{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:3px 7px;border:.5px solid var(--tabdashbd);background:var(--tabdashbg);color:var(--tabdash)}
 .searchpill svg{width:14px;height:14px;flex-shrink:0}
 .searchpill input{background:none;border:none;outline:none;font-family:var(--sans);font-size:var(--fbase);color:var(--t);width:130px}
@@ -361,7 +329,7 @@ thead th.sortable:hover{color:var(--t)}
 thead th.sortable.sorted{color:var(--t)}
 .sortarrow{color:var(--p);margin-left:3px}
 /* Fixed-width rules-score pill so trailing icons never shift with digit count */
-.spill{width:44px;justify-content:center}
+.spill{min-width:42px;justify-content:center}
 .rulesflex{display:flex;align-items:center;gap:5px}
 /* Collapsible stats/equity-curve section (export summary) */
 details.statsdetails{margin-bottom:1.75rem}
@@ -375,6 +343,16 @@ details.statsdetails[open]>summary:before{content:"▾ "}
 <div id="app"></div>
 <div id="mroot"></div>
 <script>
+const ICON_DOWN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
+const ICON_NOEDIT=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>`;
+const ICON_SUN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+const ICON_MOON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+const ICON_SEARCH=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+const ICON_X=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+const ICON_PLUS=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+const ICON_TRIRIGHT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M9 6l9 6-9 6V6z"/></svg>`;
+const ICON_TRILEFT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M15 6l-9 6 9 6V6z"/></svg>`;
+const ICON_TRIDOWN=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6 9l6 9 6-9H6z"/></svg>`;
 const RULES=[
   {id:"stop", text:"Respected my stop loss"},
   {id:"fomo", text:"Entered on conviction, not FOMO"},
@@ -405,48 +383,9 @@ const DQ_DEFAULT=[
 const MON=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const KEY="wss_j3";
-
-// ── Google Drive sync (Phase 1) ────────────────────────────────────────────────
-// Client ID only — never a client secret (this is a public browser app; secrets
-// are for confidential server-side clients and are never needed here).
-const DRIVE_CLIENT_ID="88752282122-kgd1b0kt3v9vo6vkod2d9ra3h0ta1jc8.apps.googleusercontent.com";
-const DRIVE_SCOPES="https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
-const DRIVE_APPDATA_NAME="journal-data.json";   // private file, lives in the invisible appDataFolder
-const DRIVE_MIRROR_NAME="journal-mirror.json";  // public "anyone with the link" copy for the mentor viewer
-let driveTokenClient=null;
-let driveAccessToken=null;
-let driveConnected=false;
-let driveConnecting=false;
-let driveSyncing=false;
-let driveSyncError="";
-let driveAppDataFileId=null;
-let driveMirrorFileId=null;
-let driveKnownModifiedTime=null;  // Drive's own modifiedTime for the appData file, cached after every successful load/save — used to detect another device having saved since
-let drivePendingSync=false;       // true when a save couldn't reach Drive (offline) and is waiting to retry
-let driveStaleConflict=false;     // true when a save was blocked because Drive has newer changes than what we last loaded
-let driveRetryTimer=null;
-const DRIVE_TOKEN_CACHE_KEY="wss_drive_token";
-let driveAutoConnectAttempted=false; // guards against attempting the on-load silent reconnect more than once
-let driveTokenExpiresAt=0;        // item 9 — tracks the current token's expiry so a single refresh timer can be scheduled off it
-let driveRefreshTimer=null;       // item 9 — the one mid-session silent-refresh timer in flight, if any
-let driveMenuOpen=false;          // item 6 — connected-account dropdown open/closed
-let driveUserEmail=null;          // item 6 — filled in after connect via the userinfo.email scope
-const DRIVE_MIRROR_DIRTY_KEY="wss_drive_mirror_dirty";
-let driveMirrorDirty=false;       // item 3 — true when appData saved but the mirror write failed right after; retried standalone
-let driveSaveInFlight=false;      // item 10 — true while a save's staleness-check+write cycle is actually talking to Drive
-let driveSaveQueued=false;        // item 10 — true when another save was requested mid-flight; coalesced into one fresh follow-up run
-let driveAbortController=null;    // manual hard-stop — the in-flight request's controller, if any
-let driveForceStopped=false;      // set right before aborting so the resulting fetch rejection doesn't surface as a scary error
-let driveWatchdogTimer=null;      // safety net — auto force-stops a connect/sync that never resolves (e.g. a silently-blocked
-                                   // Google prompt:"none" request), instead of spinning forever with no way out
-// sanity-check fix (items 4/6) — which flow a pending requestAccessToken() call belongs to, so the
-// shared error_callback (popup closed / blocked) knows how to recover: "connect" reverts to the plain
-// connect icon, "switch" reverts to the previously-connected state, "auto"/"refresh" fail quietly.
-let driveAttemptKind=null;
-let driveSwitchPrevEmail=null;    // snapshot of the email before "switch account" nulls it, restored if that attempt is abandoned
-const DRIVE_AUTO_BACKUP_KEY="wss_drive_last_backup"; // item 7
-const DRIVE_BACKUP_INTERVAL_DAYS=7;
-const DRIVE_BACKUP_PRUNE_DAYS=60;
+// ── Read-only viewer config ──────────────────────────────────────────────────
+const DRIVE_FILE_ID="13X7JYIoE1jtw0nXPCGm2E5HNNU4hpegS";
+const DRIVE_API_KEY="AIzaSyDCzIUWr7pADkVu1gWtZbCQbv25Q5ko8SY";
 
 // Futures contract specs — $/point drives leveraged risk/reward math.
 const TICKERS=[
@@ -471,6 +410,7 @@ function tickerInfo(symbol){return TICKERS.find(t=>t.symbol===symbol)||null;}
 
 let trades=[],reflections=[],dq=DQ_DEFAULT.map(d=>({...d})),tab="dashboard",showForm=false,editingDq=false,editingId=null,showRefForm=false,expandedIds=new Set();
 let periodMode="week",periodAnchor=new Date(),customFrom="",customTo="";
+let calendarCollapsed=false; // dashboard's calendar section collapse state
 let logSort={col:"date",dir:"desc"};
 let logFilters={ticker:[],setup:[],wl:[],process:[],lossCat:[]}; // each value is an array — multi-select
 let logFilterOpen=null;   // which filter's dropdown is open: 'ticker'|'setup'|'wl'|'process'|'lossCat'|null
@@ -481,7 +421,6 @@ let logSearchNavIndex=-1; // index of the currently-focused match, for prev/next
 let refSearchOpen=false;  // search field expanded/collapsed (reflections)
 let refSearchQuery="";    // free-text search over reflections
 let refSearchLocked=false;// true after Enter — search stays open through outside clicks until Esc
-let calendarCollapsed=false; // dashboard's calendar section collapse state
 let resultManual=false;
 let fillSeq=1;
 
@@ -501,10 +440,21 @@ function blank(){
 function td(){return new Date().toISOString().split("T")[0]}
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
+// Favicon reuses the same crossed-out-pencil shape as the read-only badge
+// (ICON_NOEDIT), just recolored per-theme since favicons can't use CSS
+// variables — powder blue on dark, steel blue on light.
+function setFavicon(){
+  const isDark=document.documentElement.getAttribute("data-theme")==="dark";
+  const color=isDark?"#B0E0E6":"#4682B4";
+  const svg=ICON_NOEDIT.replace(/currentColor/g,color).replace("<svg ",'<svg xmlns="http://www.w3.org/2000/svg" ');
+  const link=document.getElementById("favicon");
+  if(link)link.href=`data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
 function toggleTheme(){
   const cur=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
   document.documentElement.setAttribute("data-theme",cur);
   try{localStorage.setItem("wss_theme",cur);}catch(e){}
+  setFavicon();
   render();
 }
 
@@ -515,7 +465,6 @@ function save(){
   }catch(e){
     alert("Storage is full — the browser's local storage limit has been hit, most likely from screenshots. Export a backup (.json), then delete a few older screenshots to free up room.");
   }
-  driveSaveAll();
 }
 function storageInfo(){
   let bytes=0;
@@ -526,7 +475,6 @@ function storageInfo(){
 function migrateTrade(t){
   return{
     ...t,
-    ticker: t.ticker||"",
     entryTime: t.entryTime!==undefined&&t.entryTime!==null?t.entryTime:(t.time||""),
     exitTime: t.exitTime||"",
     direction: t.direction||"long",
@@ -559,755 +507,6 @@ function load(){
   }catch(e){}
 }
 
-// ── Google Drive sync — Phase 1: connect, initial load/seed, write-through ────
-// Data model: once connected, Drive is the source of truth. Connecting fetches
-// the private appData file and REPLACES in-memory state with it (or, if no
-// appData file exists yet, seeds Drive from whatever's currently in the
-// browser). Every save() afterwards writes to both the private file and the
-// public mirror file. No staleness check and no offline queue yet (Phase 2).
-const DRIVE_SPIN_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>`;
-const DRIVE_ERR_SVG=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12" y2="16.01"/></svg>`;
-const ICON_LINK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
-const ICON_CHECK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-const ICON_UP=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
-const ICON_DOWN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
-const ICON_DOC=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l4 4v13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M4 7v13a1 1 0 0 0 1 1h10"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="11" x2="17" y2="11"/><line x1="9" y1="14" x2="17" y2="14"/><line x1="9" y1="17" x2="15" y2="17"/></svg>`;
-const ICON_NOEDIT=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>`;
-const ICON_CLOCK=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>`;
-const ICON_WARN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3Z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>`;
-const ICON_SUN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
-const ICON_MOON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
-const ICON_SEARCH=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
-const ICON_PLUS=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
-const ICON_X=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-const ICON_TRIRIGHT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M9 6l9 6-9 6V6z"/></svg>`;
-const ICON_TRILEFT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M15 6l-9 6 9 6V6z"/></svg>`;
-const ICON_TRIDOWN=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6 9l6 9 6-9H6z"/></svg>`;
-const ICON_FILTER=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 4 20 4 14 12.5 14 19 10 21 10 12.5 4 4"/></svg>`;
-// Same line-icon style as every other topicon (viewBox 24x24, stroke-based, round caps/joins) —
-// classic "floppy disk" save glyph, used for the top-of-form save shortcut (see fcard header).
-const ICON_SAVE=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
-// item 4 — shared "DD MMM YY, HH:MM" (24hr) formatter for last-synced timestamps,
-// used in the connected-account dropdown here and (matching format, for consistency)
-// in viewer.html's last-synced text.
-function fmtSyncTime(iso){
-  if(!iso)return"—";
-  const d=new Date(iso);
-  if(isNaN(d.getTime()))return"—";
-  const dd=String(d.getDate()).padStart(2,"0");
-  const mon=MON[d.getMonth()].slice(0,3);
-  const yy=String(d.getFullYear()).slice(-2);
-  const hh=String(d.getHours()).padStart(2,"0");
-  const mi=String(d.getMinutes()).padStart(2,"0");
-  return `${dd} ${mon} ${yy}, ${hh}:${mi}`;
-}
-// Safety net for connect/sync attempts that never resolve — e.g. a Google
-// prompt:"none" token request that gets silently blocked (third-party cookies,
-// extensions, etc.) never calls its own callback, so nothing would otherwise
-// ever flip driveConnecting/driveSyncing back off. Without this the spinner
-// (and the dropdown behind it) can be stuck indefinitely. 20s is generous for
-// any real network round trip but short enough to never look "hung."
-function driveClearWatchdog(){if(driveWatchdogTimer){clearTimeout(driveWatchdogTimer);driveWatchdogTimer=null;}}
-function driveStartWatchdog(ms){
-  driveClearWatchdog();
-  driveWatchdogTimer=setTimeout(()=>{
-    driveWatchdogTimer=null;
-    if(!driveConnecting&&!driveSyncing)return; // resolved on its own in the meantime
-    driveForceStopped=true;
-    if(driveAbortController){try{driveAbortController.abort();}catch(e){}}
-    driveAbortController=null;
-    clearDriveRetry();
-    driveConnecting=false;driveSyncing=false;driveSaveInFlight=false;driveSaveQueued=false;
-    drivePendingSync=false;driveStaleConflict=false;driveMenuOpen=false;
-    driveAttemptKind=null;driveSwitchPrevEmail=null;
-    driveSyncError="connection timed out — click connect to try again";
-    render();
-  },ms||20000);
-}
-// item 6 — every non-"never connected" state (connecting/syncing, error, offline,
-// connected) opens this same fixed dropdown: email, switch account, disconnect,
-// force stop, last synced. Previously error/offline had no click target at all,
-// and connecting/syncing showed a stripped-down version — now they all behave
-// the same way, so there's always a way out no matter what state it's stuck in.
-function driveStatusHtml(){
-  if(driveConnecting||driveSyncing)return`<span class="drivemenu-wrap">
-    <button class="topicon spin" onclick="toggleDriveMenu(event)" aria-label="${driveConnecting?"connecting":"syncing"} — click for options"><span class="spin-ico">${DRIVE_SPIN_SVG}</span></button>
-    ${driveMenuOpen?driveMenuHtml():""}
-  </span>`;
-  if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" aria-label="newer changes were saved from another device — click to reload them" data-tt="newer changes saved elsewhere — click to reload">${ICON_WARN}</button>`;
-  if(drivePendingSync)return`<span class="drivemenu-wrap">
-    <button class="topicon warn" onclick="toggleDriveMenu(event)" aria-label="offline — your changes are saved locally and will sync automatically once you're back online — click for options" data-tt="offline — will sync automatically (click for options)">${ICON_CLOCK}</button>
-    ${driveMenuOpen?driveMenuHtml():""}
-  </span>`;
-  if(driveSyncError)return`<span class="drivemenu-wrap">
-    <button class="topicon err" onclick="toggleDriveMenu(event)" aria-label="${escAttr(driveSyncError)} — click for options" data-tt="${escAttr(driveSyncError)} (click for options)">${DRIVE_ERR_SVG}</button>
-    ${driveMenuOpen?driveMenuHtml():""}
-  </span>`;
-  if(driveConnected)return`<span class="drivemenu-wrap">
-    <button class="topicon ok" onclick="toggleDriveMenu(event)" aria-label="connected to Google Drive — click for account options" data-tt="connected — click for account options">${ICON_CHECK}</button>
-    ${driveMenuOpen?driveMenuHtml():""}
-  </span>`;
-  return`<button class="topicon" onclick="connectDrive()" aria-label="connect Google Drive" data-tt="connect Google Drive">${ICON_LINK}</button>`;
-}
-// item 6 — the one fixed dropdown shared by every state above: email (only
-// shown here, never at rest on the topbar), retry, switch account, disconnect,
-// force stop (red), and last synced.
-// sanity-check fix (item 11) — "retry" and "switch account" both end in a
-// requestAccessToken() call on the one shared driveTokenClient, whose .callback
-// property gets overwritten by whichever call runs last. Offering either of
-// those while a connect/switch attempt is already waiting on Google let a
-// second popup stomp the first attempt's callback — the first attempt's
-// eventual response then gets misrouted into the second attempt's handler,
-// leaving driveConnecting/driveAttemptKind in a state neither attempt actually
-// produced. Hiding both while busy removes the entry point instead of trying
-// to reconcile the race after the fact; "disconnect" and "force stop" stay
-// available since both are now safe to press mid-attempt (see disconnectDrive()).
-function driveMenuHtml(){
-  const busy=driveConnecting||driveSyncing;
-  return`<div class="drivemenu" onclick="event.stopPropagation()">
-    <div class="drivemenu-email">${driveUserEmail?esc(driveUserEmail):"…"}</div>
-    ${busy?"":`<button class="drivemenu-row" onclick="driveRetry()">${DRIVE_SPIN_SVG} retry</button>
-    <button class="drivemenu-row" onclick="switchDriveAccount()">switch account</button>`}
-    <button class="drivemenu-row" onclick="disconnectDrive()">disconnect</button>
-    <button class="drivemenu-row" style="color:var(--r)" onclick="driveForceStop()">${ICON_X} force stop</button>
-    <div class="drivemenu-synced">last synced: ${fmtSyncTime(driveKnownModifiedTime)}</div>
-  </div>`;
-}
-// sanity-check fix (item 5) — always-visible manual "push it again" row. Branches on
-// current state: never connected → run the normal connect flow; a real conflict →
-// pull latest (same action the stale-conflict icon itself triggers); anything else
-// (offline, a stuck sync error, or even a perfectly healthy connection) → force a
-// fresh save/sync pass right now instead of waiting for the next edit or the 20s
-// auto-retry tick.
-function driveRetry(){
-  closeDriveMenu();
-  if(!driveConnected){connectDrive();return;}
-  if(driveStaleConflict){driveReloadLatest();return;}
-  driveSaveAll();
-}
-function toggleDriveMenu(ev){
-  if(ev)ev.stopPropagation();
-  driveMenuOpen=!driveMenuOpen;
-  renderDriveStatus();
-}
-function closeDriveMenu(){
-  if(!driveMenuOpen)return;
-  driveMenuOpen=false;
-  renderDriveStatus();
-}
-document.addEventListener("click",()=>{if(driveMenuOpen)closeDriveMenu();if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen&&!logSearchLocked)closeLogSearch();if(refSearchOpen&&!refSearchLocked)closeRefSearch();});
-// Global Escape fallback — closes an open search even when focus has moved off the
-// input (e.g. a locked search, which intentionally survives outside clicks).
-document.addEventListener("keydown",(ev)=>{if(ev.key==="Escape"){if(logSearchOpen)closeLogSearch();if(refSearchOpen)closeRefSearch();if(driveMenuOpen)closeDriveMenu();}});
-async function driveFetchUserEmail(){
-  try{
-    const res=await driveApiFetch("https://www.googleapis.com/oauth2/v3/userinfo");
-    const d=await res.json();
-    driveUserEmail=d.email||null;
-  }catch(e){driveUserEmail=null;}
-}
-function renderDriveStatus(){
-  const el=document.getElementById("drive-status");
-  if(el)el.innerHTML=driveStatusHtml();
-}
-// ── Drive access-token caching — avoids re-showing the Connect button on
-// every page refresh. GIS access tokens live ~1hr; we cache the token + its
-// expiry so a reload can reuse it directly while still valid, or fall back
-// to a silent (no-popup) re-auth if it's expired but the browser still has
-// an active Google session from a prior connect.
-function cacheDriveToken(token,expiresInSeconds){
-  const expiresAt=Date.now()+((expiresInSeconds||3600)*1000);
-  driveTokenExpiresAt=expiresAt; // item 9 — tracked even if the localStorage write below fails
-  try{
-    localStorage.setItem(DRIVE_TOKEN_CACHE_KEY,JSON.stringify({token,expiresAt}));
-  }catch(e){}
-}
-function getCachedDriveToken(){
-  try{
-    const raw=localStorage.getItem(DRIVE_TOKEN_CACHE_KEY);
-    if(!raw)return null;
-    const d=JSON.parse(raw);
-    if(!d||!d.token||!d.expiresAt)return null;
-    return d;
-  }catch(e){return null;}
-}
-function clearCachedDriveToken(){
-  try{localStorage.removeItem(DRIVE_TOKEN_CACHE_KEY);}catch(e){}
-}
-function waitForGis(maxWaitMs){
-  return new Promise((resolve)=>{
-    const start=Date.now();
-    (function check(){
-      if(typeof google!=="undefined"&&google.accounts&&google.accounts.oauth2){resolve(true);return;}
-      if(Date.now()-start>maxWaitMs){resolve(false);return;}
-      setTimeout(check,150);
-    })();
-  });
-}
-// Runs once on page load. Only does anything if this browser has connected
-// before (a cached token entry exists, valid or not) — someone who's never
-// connected still sees the plain Connect button, unchanged.
-async function attemptDriveAutoConnect(){
-  if(driveAutoConnectAttempted)return;
-  driveAutoConnectAttempted=true;
-  const cached=getCachedDriveToken();
-  if(!cached)return;
-  const ok=await waitForGis(4000);
-  if(!ok)return; // GIS script never loaded (blocked, offline, etc.) — Connect button still works manually
-  const stillValid=cached.expiresAt-60000>Date.now(); // 60s safety buffer before expiry
-  if(stillValid){
-    driveAccessToken=cached.token;
-    driveTokenExpiresAt=cached.expiresAt; // item 9 — reusing the cache, not calling cacheDriveToken(), so set this explicitly
-    driveForceStopped=false; // see connectDrive() — must clear before a fresh attempt or the callback silently no-ops
-    driveConnecting=true;renderDriveStatus();
-    driveSyncError="";
-    driveStartWatchdog();
-    await driveConnectFlow();
-    if(driveConnected)return;
-    // Cached token turned out to be invalid despite looking unexpired (e.g. revoked
-    // externally) — clear the noisy error from that attempt and fall through to a
-    // silent re-auth instead of leaving an alarming message on screen.
-    driveSyncError="";
-  }
-  // Either expired, or the cached token didn't actually work — try a silent
-  // (no popup) re-auth. Succeeds if the browser still has an active Google
-  // session and prior consent; if not, fails quietly with no visible error,
-  // same as if the person had simply never connected.
-  const tc=ensureDriveTokenClient();
-  if(!tc)return;
-  driveForceStopped=false; // see connectDrive() — must clear before a fresh attempt or the callback silently no-ops
-  driveConnecting=true;renderDriveStatus();
-  driveStartWatchdog(); // this prompt:"none" call can be silently swallowed by the
-                         // browser (blocked third-party cookies, etc.) and never
-                         // call back at all — without this, that leaves the spinner
-                         // stuck forever with no way to recover but a hard refresh.
-  driveAttemptKind="auto";
-  tc.callback=async(resp)=>{
-    if(driveForceStopped)return; // user hit stop while this was still waiting on Google — discard the late response
-    driveClearWatchdog();driveAttemptKind=null;
-    if(resp.error){
-      driveConnecting=false;driveSyncError="";
-      renderDriveStatus();
-      return;
-    }
-    driveAccessToken=resp.access_token;
-    cacheDriveToken(resp.access_token,resp.expires_in);
-    await driveConnectFlow();
-  };
-  tc.requestAccessToken({prompt:"none"});
-}
-// sanity-check fix (items 4/6) — root cause of the "endless syncing loop": GIS never
-// calls the regular callback at all if the popup is closed before finishing or gets
-// blocked outright, so nothing ever flipped driveConnecting back off. error_callback
-// is GIS's dedicated hook for exactly those two non-OAuth cases (confirmed against
-// Google's current js-reference docs: types are "popup_closed" and
-// "popup_failed_to_open"). driveAttemptKind (set right before every
-// requestAccessToken() call below) tells this shared handler how to recover:
-// "connect" → back to the plain connect icon, no error (a closed popup was a
-// deliberate bail, not a failure); "switch" → back to the previously-connected
-// state with the original email restored, not stuck mid-switch; "auto"/"refresh"
-// (the silent background paths) → fail quietly either way, matching how they
-// already treat a resp.error. A blocked popup gets a real message either way,
-// since that's not the person choosing to back out.
-function driveTokenErrorCallback(err){
-  const kind=driveAttemptKind;
-  driveAttemptKind=null;
-  driveClearWatchdog();
-  if(driveForceStopped){driveForceStopped=false;return;}
-  const blocked=err&&err.type==="popup_failed_to_open";
-  driveConnecting=false;
-  if(kind==="switch"){
-    driveUserEmail=driveSwitchPrevEmail;driveSwitchPrevEmail=null;
-    driveSyncError=blocked?"popup blocked — allow popups for this site and try switching again":"";
-  }else if(kind==="connect"){
-    driveSyncError=blocked?"popup blocked — allow popups for this site and click connect again":"";
-  }else{
-    // "auto" / "refresh" / unknown — background paths fail quietly, no banner
-    driveSyncError="";
-  }
-  renderDriveStatus();
-}
-function ensureDriveTokenClient(){
-  if(driveTokenClient)return driveTokenClient;
-  if(typeof google==="undefined"||!google.accounts||!google.accounts.oauth2)return null;
-  driveTokenClient=google.accounts.oauth2.initTokenClient({client_id:DRIVE_CLIENT_ID,scope:DRIVE_SCOPES,callback:"",error_callback:driveTokenErrorCallback});
-  return driveTokenClient;
-}
-// item 9 — mid-session token refresh. GIS access tokens live ~1hr; item 1 only
-// covers the on-page-load case. This closes the gap for a tab left open
-// continuously by scheduling one silent (no-popup) refresh ~5 min before the
-// current token expires, reusing the exact same prompt:"none" reauth path
-// attemptDriveAutoConnect() already uses. Only one timer is ever in flight,
-// so there's no concurrent-refresh race to guard against.
-function clearDriveRefreshTimer(){
-  if(driveRefreshTimer){clearTimeout(driveRefreshTimer);driveRefreshTimer=null;}
-}
-function scheduleDriveTokenRefresh(expiresAt){
-  clearDriveRefreshTimer();
-  const refreshAt=expiresAt-5*60*1000; // ~5 min safety margin before expiry
-  const delay=Math.max(refreshAt-Date.now(),0);
-  driveRefreshTimer=setTimeout(silentDriveTokenRefresh,delay);
-}
-function silentDriveTokenRefresh(){
-  driveRefreshTimer=null;
-  if(!driveConnected)return; // disconnected since this was scheduled — nothing to refresh
-  // sanity-check fix (item 11) — same re-entry hazard as connectDrive()/switchDriveAccount():
-  // this also points the shared driveTokenClient's .callback at itself before calling
-  // requestAccessToken(). If a manual connect/switch happens to be in flight at the exact
-  // moment this 5-min-early timer fires, don't clobber it — just skip this cycle. The token
-  // isn't actually expired yet (5 min of margin), and if the manual attempt succeeds it
-  // reschedules this refresh anyway via driveConnectFlow(); if not, the existing 401
-  // fallback (noted below) still catches it.
-  if(driveConnecting||driveSyncing)return;
-  const tc=ensureDriveTokenClient();
-  if(!tc)return; // GIS unavailable right now — falls through to the existing
-                  // failure surface: the next Drive call with the stale token
-                  // 401s and shows as a sync error, same as before item 9 existed.
-  driveAttemptKind="refresh";
-  tc.callback=(resp)=>{
-    driveAttemptKind=null;
-    if(resp.error)return; // silent refresh failed (session signed out elsewhere,
-    // access revoked) — fails quietly, no popup, no alarming message. No data
-    // is lost either way: saves already write to localStorage first (Phase 1),
-    // and the next Drive call will 401 and route into the existing offline-style
-    // retry/error handling rather than this feature needing its own.
-    driveAccessToken=resp.access_token;
-    cacheDriveToken(resp.access_token,resp.expires_in);
-    scheduleDriveTokenRefresh(driveTokenExpiresAt); // reschedule for the next cycle
-  };
-  tc.requestAccessToken({prompt:"none"});
-}
-// sanity-check fix (item 11) — re-entry guard. connectDrive/switchDriveAccount/
-// silentDriveTokenRefresh all point the SAME shared driveTokenClient's
-// .callback at their own handler right before calling requestAccessToken().
-// If a second call landed while a first was still waiting on Google, it would
-// silently overwrite that .callback — so the first popup's eventual response
-// fires the SECOND attempt's handler instead of its own, misrouting state
-// (wrong driveAttemptKind, a watchdog armed for the wrong attempt, etc.).
-// driveMenuHtml() already hides the buttons that could trigger this from the
-// UI while busy; this bails out defensively even if something else calls in
-// (e.g. a future code path, or two rapid clicks before the DOM re-renders).
-function connectDrive(){
-  if(driveConnecting||driveSyncing)return;
-  const tc=ensureDriveTokenClient();
-  if(!tc){
-    alert("Google sign-in is still loading — wait a second and click Connect again.");
-    return;
-  }
-  driveForceStopped=false; // clear any stale force-stop from a previous attempt, or this new attempt's callback will silently no-op forever
-  driveAttemptKind="connect";
-  driveConnecting=true;driveSyncError="";renderDriveStatus();
-  // sanity-check fix (items 4/6) — this used to have no watchdog at all (only the
-  // silent auto-reconnect path did), so an abandoned/blocked popup with no
-  // error_callback support would've spun forever. 2 minutes is generous for a
-  // real passkey/2FA/captcha round trip, short enough to never look permanently stuck.
-  driveStartWatchdog(120000);
-  tc.callback=async(resp)=>{
-    if(driveForceStopped)return;
-    driveClearWatchdog();driveAttemptKind=null;
-    if(resp.error){
-      driveConnecting=false;
-      driveSyncError="sign-in failed ("+resp.error+")";
-      renderDriveStatus();
-      return;
-    }
-    driveAccessToken=resp.access_token;
-    cacheDriveToken(resp.access_token,resp.expires_in);
-    await driveConnectFlow();
-  };
-  tc.requestAccessToken({prompt:"consent"});
-}
-// item 6 — "switch account" row in the dropdown. Hints Google's own account
-// picker via prompt:'select_account'. On success this runs through the same
-// driveConnectFlow() as any other connect, which naturally isolates data per
-// Google account (a different account's appData/mirror files are separate,
-// created fresh the first time) — no special-casing needed for that.
-function switchDriveAccount(){
-  if(driveConnecting||driveSyncing)return; // see connectDrive() — same re-entry guard
-  closeDriveMenu();
-  const tc=ensureDriveTokenClient();
-  if(!tc){
-    alert("Google sign-in is still loading — wait a second and try again.");
-    return;
-  }
-  driveForceStopped=false; // see connectDrive() — must clear before a fresh attempt or the callback silently no-ops
-  driveAttemptKind="switch";
-  driveSwitchPrevEmail=driveUserEmail; // snapshot — restored by driveTokenErrorCallback if this attempt is abandoned
-  driveConnecting=true;driveSyncError="";driveUserEmail=null;renderDriveStatus();
-  driveStartWatchdog(120000); // see connectDrive() — same reasoning
-  tc.callback=async(resp)=>{
-    if(driveForceStopped)return;
-    driveClearWatchdog();driveAttemptKind=null;
-    if(resp.error){
-      driveConnecting=false;
-      driveUserEmail=driveSwitchPrevEmail;driveSwitchPrevEmail=null; // restore — this was never actually a disconnect
-      driveSyncError="switch account failed ("+resp.error+")";
-      renderDriveStatus();
-      return;
-    }
-    driveSwitchPrevEmail=null;
-    driveAccessToken=resp.access_token;
-    cacheDriveToken(resp.access_token,resp.expires_in);
-    await driveConnectFlow();
-  };
-  tc.requestAccessToken({prompt:"select_account"});
-}
-// Full state teardown shared by disconnect and force-stop: revokes the token,
-// clears every piece of connection state (in-memory and cached), and marks
-// auto-connect as already-attempted so nothing silently retries afterward.
-// The next explicit connect (a real relogin) runs the normal connect flow
-// from scratch, which re-establishes token refresh / stay-logged-in on its
-// own — this teardown doesn't need to special-case that.
-function driveFullTeardown(){
-  if(driveAccessToken&&typeof google!=="undefined"&&google.accounts&&google.accounts.oauth2){
-    try{google.accounts.oauth2.revoke(driveAccessToken,()=>{});}catch(e){}
-  }
-  driveAccessToken=null;driveConnected=false;driveConnecting=false;driveSyncing=false;
-  driveAppDataFileId=null;driveMirrorFileId=null;driveSyncError="";
-  driveKnownModifiedTime=null;drivePendingSync=false;driveStaleConflict=false;
-  driveMenuOpen=false;driveUserEmail=null;                    // item 6
-  driveTokenExpiresAt=0;clearDriveRefreshTimer();              // item 9
-  setMirrorDirty(false);                                       // item 3
-  driveSaveInFlight=false;driveSaveQueued=false;                // item 10
-  driveAttemptKind=null;driveSwitchPrevEmail=null;
-  clearDriveRetry();
-  clearCachedDriveToken();
-  driveAutoConnectAttempted=true; // an explicit disconnect/force-stop should stick — don't silently reconnect on the next reload
-}
-// sanity-check fix (item 11) — root cause of a "phantom reconnect": disconnectDrive()
-// used to only call driveFullTeardown(), which never touched driveForceStopped.
-// If a connect/switch attempt was still waiting on Google when disconnect was
-// pressed, that pending tc.callback checks ONLY driveForceStopped (see
-// connectDrive()/switchDriveAccount() above) — since disconnect never set it,
-// the stray callback would later fire for real, plant a fresh access token, and
-// call driveConnectFlow(), silently re-establishing the exact connection the
-// person just explicitly ended. This mirrors what driveForceStop() already does
-// for the in-flight-request case, so "disconnect" is now safe to press at any
-// point, not just once a connect has already settled.
-function disconnectDrive(){
-  if(driveConnecting){
-    driveClearWatchdog();
-    driveForceStopped=true;
-    if(driveAbortController){try{driveAbortController.abort();}catch(e){}}
-    driveAbortController=null;
-  }
-  driveFullTeardown();
-  renderDriveStatus();
-}
-function driveBeginAttempt(){
-  driveForceStopped=false;
-  driveAbortController=new AbortController();
-  return driveAbortController;
-}
-function driveForceStop(){
-  // Manual hard-stop for a sync/connect that's stuck — cancels whatever request
-  // is actually in flight, then does a full teardown (same end state as an
-  // explicit disconnect) so nothing keeps retrying or lingering in the
-  // background. No error banner: this was a deliberate stop, not a failure.
-  driveClearWatchdog();
-  driveForceStopped=true;
-  if(driveAbortController){try{driveAbortController.abort();}catch(e){}}
-  driveAbortController=null;
-  driveFullTeardown();
-  render();
-}
-async function driveApiFetch(url,options){
-  options=options||{};
-  options.headers={...(options.headers||{}),Authorization:"Bearer "+driveAccessToken};
-  if(driveAbortController)options.signal=driveAbortController.signal;
-  const res=await fetch(url,options);
-  if(!res.ok){
-    let detail="";
-    try{const j=await res.json();detail=j.error&&j.error.message?j.error.message:"";}catch(e){}
-    throw new Error("Drive API error "+res.status+(detail?": "+detail:""));
-  }
-  return res;
-}
-async function driveFindFile(name,isAppData){
-  const q=`name='${name.replace(/'/g,"\\'")}' and trashed=false`;
-  const params=new URLSearchParams({q,fields:"files(id,name,modifiedTime)",spaces:isAppData?"appDataFolder":"drive"});
-  const res=await driveApiFetch("https://www.googleapis.com/drive/v3/files?"+params.toString());
-  const d=await res.json();
-  return(d.files&&d.files.length)?d.files[0]:null;
-}
-async function driveGetModifiedTime(fileId){
-  const res=await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=modifiedTime`);
-  const d=await res.json();
-  return d.modifiedTime;
-}
-async function driveDownloadFile(fileId){
-  const res=await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-  return res.text();
-}
-async function driveCreateFile(name,content,isAppData){
-  const metadata=isAppData?{name,parents:["appDataFolder"]}:{name};
-  const boundary="-------driveJournalBoundary"+Date.now();
-  const body=
-    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`+
-    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n`+
-    `--${boundary}--`;
-  const res=await driveApiFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime",{
-    method:"POST",
-    headers:{"Content-Type":`multipart/related; boundary=${boundary}`},
-    body
-  });
-  return res.json();
-}
-async function driveUpdateFile(fileId,content){
-  const res=await driveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&fields=modifiedTime`,{
-    method:"PATCH",
-    headers:{"Content-Type":"application/json"},
-    body:content
-  });
-  return res.json();
-}
-async function driveSetPublicReadable(fileId){
-  await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({role:"reader",type:"anyone"})
-  });
-}
-function driveSyncPayload(){
-  return JSON.stringify({trades,reflections,dq,lastModified:new Date().toISOString()});
-}
-async function driveConnectFlow(){
-  driveSyncError="";
-  driveBeginAttempt();
-  try{
-    const foundAppData=await driveFindFile(DRIVE_APPDATA_NAME,true);
-    if(foundAppData){
-      driveAppDataFileId=foundAppData.id;
-      driveKnownModifiedTime=foundAppData.modifiedTime;
-      const raw=await driveDownloadFile(foundAppData.id);
-      const d=JSON.parse(raw||"{}");
-      if(Array.isArray(d.trades))trades=d.trades.map(migrateTrade);
-      if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);
-      if(d.dq&&d.dq.length)dq=d.dq;
-    }else{
-      const created=await driveCreateFile(DRIVE_APPDATA_NAME,driveSyncPayload(),true);
-      driveAppDataFileId=created.id;
-      driveKnownModifiedTime=created.modifiedTime;
-    }
-    const foundMirror=await driveFindFile(DRIVE_MIRROR_NAME,false);
-    if(foundMirror){
-      driveMirrorFileId=foundMirror.id;
-      await driveUpdateFile(driveMirrorFileId,driveSyncPayload());
-    }else{
-      const createdMirror=await driveCreateFile(DRIVE_MIRROR_NAME,driveSyncPayload(),false);
-      driveMirrorFileId=createdMirror.id;
-      await driveSetPublicReadable(driveMirrorFileId);
-    }
-    driveConnected=true;driveConnecting=false;
-    console.log("[drive] appData file id:",driveAppDataFileId);
-    console.log("[drive] mirror file id:",driveMirrorFileId);
-    scheduleDriveTokenRefresh(driveTokenExpiresAt); // item 9 — single choke point for every successful connect path
-    driveFetchUserEmail();                          // item 6 — fire and forget; dropdown shows "…" until this resolves
-    if(getMirrorDirtyFlag()){                       // item 3 — resume a retry left over from before a page reload
-      driveMirrorDirty=true;
-      scheduleDriveRetry();
-    }
-    try{localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));}catch(e){}
-    render();
-  }catch(e){
-    if(driveForceStopped){driveForceStopped=false;return;} // manual stop — driveForceStop() already reset everything and rendered
-    driveConnecting=false;
-    driveSyncError=(e.message||String(e));
-    render();
-  }
-}
-async function driveReloadLatest(){
-  // Pulls whatever's currently on Drive and replaces in-memory state with it —
-  // used after a staleness conflict, where another device saved more recently
-  // than what we last loaded here. Whatever hadn't been saved locally is lost;
-  // that's the trade-off for not silently clobbering the other device's save.
-  if(!driveAppDataFileId||!driveConnected)return;
-  driveSyncing=true;driveStaleConflict=false;renderDriveStatus();
-  driveBeginAttempt();
-  try{
-    const raw=await driveDownloadFile(driveAppDataFileId);
-    const d=JSON.parse(raw||"{}");
-    if(Array.isArray(d.trades))trades=d.trades.map(migrateTrade);
-    if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);
-    if(d.dq&&d.dq.length)dq=d.dq;
-    driveKnownModifiedTime=await driveGetModifiedTime(driveAppDataFileId);
-    try{localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));}catch(e){}
-    driveSyncError="";
-  }catch(e){
-    if(driveForceStopped){driveForceStopped=false;return;}
-    driveSyncError="reload failed ("+(e.message||e)+")";
-  }
-  driveSyncing=false;render();
-}
-// item 3 — the mirror-dirty flag itself. Cached in localStorage (not just in
-// memory) so a reload before the retry loop catches up doesn't lose track of
-// the fact the mirror is stale — driveConnectFlow() checks this on every
-// (re)connect and resumes the retry if needed.
-function setMirrorDirty(v){
-  driveMirrorDirty=v;
-  try{
-    if(v)localStorage.setItem(DRIVE_MIRROR_DIRTY_KEY,"1");
-    else localStorage.removeItem(DRIVE_MIRROR_DIRTY_KEY);
-  }catch(e){}
-}
-function getMirrorDirtyFlag(){
-  try{return localStorage.getItem(DRIVE_MIRROR_DIRTY_KEY)==="1";}catch(e){return false;}
-}
-function scheduleDriveRetry(){
-  if(driveRetryTimer)return;
-  driveRetryTimer=setInterval(()=>{
-    if(!navigator.onLine||!driveConnected)return;
-    if(drivePendingSync){driveSaveAll();return;}
-    if(driveMirrorDirty)retryMirrorWrite();
-  },20000);
-}
-function clearDriveRetry(){
-  if(driveRetryTimer){clearInterval(driveRetryTimer);driveRetryTimer=null;}
-}
-// item 3 — standalone mirror catch-up, used when appData saved fine but the
-// mirror write right after it failed. Rebuilds the payload fresh each retry
-// (rather than replaying the stale one) so it reflects any newer edits too.
-async function retryMirrorWrite(){
-  if(!driveMirrorFileId||!driveConnected||!driveAccessToken)return;
-  try{
-    await driveUpdateFile(driveMirrorFileId,driveSyncPayload());
-    setMirrorDirty(false);
-    if(!drivePendingSync)clearDriveRetry();
-  }catch(e){
-    // still dirty — next 20s tick tries again, no user-facing error for this
-  }
-}
-async function driveSaveAll(){
-  if(!driveConnected||!driveAccessToken)return;
-  // item 10 — concurrency guard. Without this, two rapid-fire saves (e.g.
-  // deleting two trades back to back) each start their own independent
-  // staleness-check + write cycle. Both checks can pass (neither sees the
-  // other's write yet), so both PUTs fire — and since a PUT fully replaces
-  // the file, whichever response happens to land LAST wins, even if it was
-  // sent first with a now-stale payload. That silently reverts the other
-  // save. Serializing here — at most one save in flight, with any change
-  // that arrives mid-save coalesced into a single fresh follow-up — closes
-  // the race entirely: the follow-up always reads trades/reflections/dq at
-  // the moment it actually runs, never a stale snapshot.
-  if(driveSaveInFlight){
-    driveSaveQueued=true;
-    return;
-  }
-  if(!navigator.onLine){
-    drivePendingSync=true;driveSyncError="";renderDriveStatus();
-    scheduleDriveRetry();
-    return;
-  }
-  driveSaveInFlight=true;
-  driveSyncing=true;renderDriveStatus();
-  driveBeginAttempt();
-  try{
-    // Staleness check — if another device saved since we last loaded/saved,
-    // don't blindly overwrite their changes with our (older) in-memory state.
-    if(driveAppDataFileId&&driveKnownModifiedTime){
-      const current=await driveGetModifiedTime(driveAppDataFileId);
-      if(current&&current!==driveKnownModifiedTime){
-        driveSyncing=false;driveStaleConflict=true;driveSyncError="";
-        driveSaveInFlight=false;driveSaveQueued=false; // a real conflict means "reload latest" is the next step, not a silent retry
-        renderDriveStatus();
-        return;
-      }
-    }
-    const payload=driveSyncPayload();
-    if(driveAppDataFileId){
-      const updated=await driveUpdateFile(driveAppDataFileId,payload);
-      driveKnownModifiedTime=updated.modifiedTime;
-    }
-    if(driveMirrorFileId){
-      // item 3 — the mirror write is isolated from the try/catch below on
-      // purpose: appData already has the latest data at this point, so a
-      // mirror failure shouldn't be treated as a failed save overall. Flag it
-      // and let the retry loop catch it up standalone instead.
-      try{
-        await driveUpdateFile(driveMirrorFileId,payload);
-        if(driveMirrorDirty)setMirrorDirty(false);
-      }catch(mirrorErr){
-        setMirrorDirty(true);
-      }
-    }
-    driveSyncError="";drivePendingSync=false;
-    if(driveMirrorDirty)scheduleDriveRetry();else clearDriveRetry();
-    maybeRunWeeklyBackup(); // item 7 — fire and forget, checked on every successful save
-  }catch(e){
-    if(driveForceStopped){driveForceStopped=false;driveSaveInFlight=false;driveSaveQueued=false;return;}
-    const msg=(e&&e.message)||String(e);
-    const looksOffline=!navigator.onLine||/Failed to fetch|NetworkError|network error/i.test(msg);
-    if(looksOffline){
-      drivePendingSync=true;driveSyncError="";
-      scheduleDriveRetry();
-    }else{
-      driveSyncError="sync failed — saved locally only ("+msg+")";
-    }
-  }
-  driveSaveInFlight=false;
-  driveSyncing=false;renderDriveStatus();
-  // item 10 — if a save request came in while this one was running, run it
-  // now: this re-reads trades/reflections/dq fresh (not the payload captured
-  // above), so it always reflects everything that changed in the meantime,
-  // no matter how many edits stacked up while we were busy.
-  if(driveSaveQueued){
-    driveSaveQueued=false;
-    driveSaveAll();
-  }
-}
-// item 7 — weekly automatic Drive backup. Reuses the existing dated .json
-// export naming convention (ddmmyy(), same as the manual "export .json"
-// button), written to regular Drive space (not appData) as a new file each
-// time rather than overwritten like the mirror, and left private (no
-// driveSetPublicReadable call — unlike the mirror this isn't meant to be shared).
-function getLastAutoBackupDate(){
-  try{const raw=localStorage.getItem(DRIVE_AUTO_BACKUP_KEY);return raw?new Date(raw):null;}catch(e){return null;}
-}
-function setLastAutoBackupDate(d){
-  try{localStorage.setItem(DRIVE_AUTO_BACKUP_KEY,d.toISOString());}catch(e){}
-}
-async function maybeRunWeeklyBackup(){
-  if(!driveConnected||!driveAccessToken)return;
-  const last=getLastAutoBackupDate();
-  const now=new Date();
-  if(last&&(now-last)<DRIVE_BACKUP_INTERVAL_DAYS*24*60*60*1000)return;
-  try{
-    const name=`J.'s TS A${ddmmyy(now)}.json`;
-    await driveCreateFile(name,driveSyncPayload(),false);
-    setLastAutoBackupDate(now);
-    await pruneOldBackups();
-  }catch(e){
-    // Best-effort background backup — a failed attempt just means
-    // lastAutoBackupDate didn't move forward, so it's retried on the next
-    // successful save rather than needing its own error surface.
-    console.log("[drive] weekly backup failed, will retry on next save:",e.message||e);
-  }
-}
-// Deletes auto-backup files older than 60 days. Lists files visible under the
-// drive.file scope (which — since this app never opens a picker — is just the
-// mirror plus prior auto-backups) and filters client-side by the backup
-// filename prefix so the mirror is never touched.
-async function pruneOldBackups(){
-  try{
-    const params=new URLSearchParams({q:"trashed=false",fields:"files(id,name,createdTime)",spaces:"drive"});
-    const res=await driveApiFetch("https://www.googleapis.com/drive/v3/files?"+params.toString());
-    const d=await res.json();
-    const files=(d.files||[]).filter(f=>f.name&&f.name.indexOf("J.'s TS A")===0&&f.name.endsWith(".json"));
-    const cutoff=Date.now()-DRIVE_BACKUP_PRUNE_DAYS*24*60*60*1000;
-    for(const f of files){
-      const created=new Date(f.createdTime).getTime();
-      if(created<cutoff){
-        await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${f.id}`,{method:"DELETE"});
-      }
-    }
-  }catch(e){
-    console.log("[drive] backup prune failed, will retry next time:",e.message||e);
-  }
-}
-window.addEventListener("online",()=>{
-  if(drivePendingSync&&driveConnected)driveSaveAll();
-});
-
 // ── Date / period helpers ─────────────────────────────────────────────────────
 function parseYMD(s){const p=s.split("-").map(Number);return new Date(p[0],p[1]-1,p[2]);}
 function ymd(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
@@ -1322,7 +521,7 @@ function periodRange(){
   if(periodMode==="week"){
     const s=startOfWeek(periodAnchor),e=endOfWeek(periodAnchor);
     const label=s.getMonth()===e.getMonth()
-      ?`Week of ${MON[s.getMonth()].slice(0,3)} ${s.getDate()} – ${e.getDate()}, ${e.getFullYear()}`
+      ?`Week of ${MON[s.getMonth()].slice(0,3)} ${s.getDate()}–${e.getDate()}, ${e.getFullYear()}`
       :`Week of ${MON[s.getMonth()].slice(0,3)} ${s.getDate()} – ${MON[e.getMonth()].slice(0,3)} ${e.getDate()}, ${e.getFullYear()}`;
     return{start:s,end:e,label};
   }
@@ -1668,7 +867,7 @@ function buildEquityCurveSVG(points,w,h,tradeCount){
   const min=ax.min,max=ax.max;
   // Gutter widens with the longest label so big balances never clip.
   const longest=ax.ticks.reduce((a,v)=>Math.max(a,cu(v).length),0);
-  const padL=Math.max(52,longest*6.6+16),padR=28,padT=14,padB=24;
+  const padL=Math.max(52,longest*6.6+16),padR=24,padT=14,padB=24;
   const plotW=Math.max(10,w-padL-padR),plotH=Math.max(10,h-padT-padB);
   const totalTrades=tradeCount!==undefined?tradeCount:real.reduce((a,p)=>a+(p.count||0),0);
   const sparse=real.length<=EQ_SPARSE_DAYS&&totalTrades<=EQ_SPARSE_TRADES;
@@ -1712,8 +911,12 @@ function buildEquityCurveSVG(points,w,h,tradeCount){
     for(let k=0;k<nTicks;k++)xTickIdxs.push(realIdxs[Math.round(k*(realIdxs.length-1)/(nTicks-1))]);
     xTickIdxs=[...new Set(xTickIdxs)];
   }
+  const lastRealIdx=points.length-1;
   const xTicks=xTickIdxs.map(i=>{
-    return`<text x="${coords[i][0].toFixed(1)}" y="${h-6}" text-anchor="middle" font-size="11" font-weight="300" fill="var(--t3)">${axisDate(points[i].date)}</text>`;
+    const isLast=i===lastRealIdx;
+    const anchor=isLast?"end":"middle";
+    const tx=isLast?coords[i][0]-2:coords[i][0];
+    return`<text x="${tx.toFixed(1)}" y="${h-6}" text-anchor="${anchor}" font-size="11" font-weight="300" fill="var(--t3)">${axisDate(points[i].date)}</text>`;
   }).join("");
 
   const hitPts=points.map((p,i)=>p.date?{x:Number(coords[i][0].toFixed(1)),y:Number(coords[i][1].toFixed(1)),date:p.date,val:p.cum}:null).filter(Boolean);
@@ -1802,6 +1005,19 @@ function pc(n){return n===null||isNaN(n)?"—":`${(n*100).toFixed(1)}%`}
 function sc(v){return v===null?"var(--t3)":v>=.8?"var(--g)":v>=.5?"var(--a)":"var(--r)"}
 function sbg(v){return v===null?"var(--s2)":v>=.8?"var(--gbg)":v>=.5?"var(--abg)":"var(--rbg)"}
 function sbd(v){return v===null?"var(--bd)":v>=.8?"var(--gbd)":v>=.5?"var(--abd)":"var(--rbd)"}
+// item 8 — same "DD MMM YY, HH:MM" (24hr) formatter as the main journal's
+// connected-account dropdown (item 4), applied here for consistency.
+function fmtSyncTime(iso){
+  if(!iso)return"—";
+  const d=new Date(iso);
+  if(isNaN(d.getTime()))return"—";
+  const dd=String(d.getDate()).padStart(2,"0");
+  const mon=MON[d.getMonth()].slice(0,3);
+  const yy=String(d.getFullYear()).slice(-2);
+  const hh=String(d.getHours()).padStart(2,"0");
+  const mi=String(d.getMinutes()).padStart(2,"0");
+  return `${dd} ${mon} ${yy}, ${hh}:${mi}`;
+}
 function esc(s){return (s||"").replace(/</g,"&lt;");}
 function escAttr(s){return (s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
 function reEsc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
@@ -2197,6 +1413,30 @@ function confirmExportSummary(){
 // ── Export / Import ───────────────────────────────────────────────────────────
 function expData(){const b=new Blob([JSON.stringify({trades,reflections,dq},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`J.'s TS A${ddmmyy(new Date())}.json`;a.click();}
 function impData(){const i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.trades)trades=d.trades.map(migrateTrade);if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);else if(d.ref&&(d.ref.best||d.ref.broke||d.ref.improve))reflections=[migrateReflection({id:Date.now(),date:td(),best:d.ref.best||"",broke:d.ref.broke||"",improve:d.ref.improve||""})];if(d.dq&&d.dq.length)dq=d.dq;save();render();}catch(e){alert("Invalid file.")}};r.readAsText(f);};i.click();}
+
+function expCSV(){
+  const list=getFilteredTrades();
+  const rh=RULES.map(r=>`"${r.text}"`).join(",");
+  const dh=dq.map(d=>`"DQ: ${d.text}"`).join(",");
+  const hdr=`Date,Entry Time,Exit Time,Ticker,Direction,Setup,Contracts,Entry,Stop,Target,Exit,Risk $,Reward $,Planned RR,Realized R,Result,W/L,Duration (min),Rule Score,Good/Bad Trade,Loss Category,Comments,${rh},${dh}`;
+  const lcMap=Object.fromEntries(LOSSCATS.map(c=>[c.id,c.label]));
+  const rows=list.map(t=>{
+    const e=enrich(t);
+    const rc=RULES.map(r=>{const a=(t.ra||{})[r.id];return a===null||a===undefined?"":a==="yes"?"Yes":"No";}).join(",");
+    const dc=dq.map(d=>{const a=(t.dqa||{})[d.id];return a===true?"Violated":a===false?"Clean":"";}).join(",");
+    const cm=`"${(t.comments||"").replace(/"/g,'""')}"`;
+    return[t.date,t.entryTime||"",t.exitTime||"",t.ticker.toUpperCase(),e.direction,t.setup,t.contracts||"",
+      t.entry,t.stop,t.target,t.exit||"",
+      e.risk!==null?e.risk.toFixed(2):"",e.reward!==null?e.reward.toFixed(2):"",
+      e.rr!==null?e.rr.toFixed(2):"",e.realizedR!==null?e.realizedR.toFixed(2):"",
+      t.result,e.wl||"",e.durationMin!==null?Math.round(e.durationMin):"",
+      e.rs!==null?pc(e.rs):"",e.isGood===null?"":e.isGood?"Good Trade":"Bad Trade",
+      t.lossCat?lcMap[t.lossCat]||"":"",cm,
+      rc,dc].join(",");
+  });
+  const b=new Blob([[hdr,...rows].join("\n")],{type:"text/csv"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=exportFileName("csv");a.click();
+}
 
 function expSummaryHTML(includeStats){
   if(includeStats===undefined)includeStats=true;
@@ -3095,7 +2335,7 @@ ${dq.map(d=>`<div class="dqeditrow"><input id="dqe-${d.id}" type="text" value="$
   container.innerHTML=`
 <div class="dqhead">
   <span class="fsec" style="margin:0;padding:0;border:none">trade disqualifiers <span style="font-weight:400;color:var(--t3)"> — did any apply to this trade?</span></span>
-  <button class="dqedit" onclick="toggleDqEdit()">edit list</button>
+  <button class="dqedit" data-edit="1" onclick="toggleDqEdit()">edit list</button>
 </div>
 <div class="dqlist">
 ${dq.map(d=>{
@@ -3208,29 +2448,17 @@ function render(){
 <div class="topbar">
   <div>
     <p class="brand">J.</p>
-    <h1>trading journal</h1>
+    <h1>trading journal<span class="robadge" title="read-only">${ICON_NOEDIT}</span></h1>
+    <p class="sub" style="margin-bottom:0"><span style="font-weight:300;font-size:var(--fsm);font-style:italic">last synced: ${fmtSyncTime(driveModifiedTime)}</span></p>
   </div>
   <div class="topbaracts">
-    <div class="topicons">
-      <span id="drive-status">${driveStatusHtml()}</span>
-      <span class="iconsep">|</span>
-      <button class="topicon" onclick="impData()" aria-label="import backup (.json)" data-tt="import backup (.json)">${ICON_UP}</button>
-      <span class="iconsep">|</span>
-      <button class="topicon" onclick="expData()" aria-label="export backup (.json)" data-tt=".json export">${ICON_DOWN}</button>
-      <span class="iconsep">|</span>
-      <button class="topicon" onclick="openExportOptions()" aria-label="share summary (.html)" data-tt=".html summary export">${ICON_DOWN}${ICON_DOC}</button>
-      <span class="iconsep">|</span>
-      <button class="themetoggle" onclick="toggleTheme()" aria-label="${isDark?"switch to light mode":"switch to dark mode"}" data-tt="${isDark?"switch to light mode":"switch to dark mode"}">${isDark?ICON_SUN:ICON_MOON}</button>
+    <div class="bacts bacts-slim">
+      <button class="btn" data-edit="1" onclick="impData()">↑ import</button>
     </div>
+    <button class="topicon" onclick="openExportOptions()" title="share summary (.html)">${ICON_DOWN}</button>
+    <button class="themetoggle" onclick="toggleTheme()" title="toggle theme">${isDark?ICON_SUN:ICON_MOON}</button>
   </div>
 </div>
-${driveStaleConflict?`<div class="banner" style="border-color:var(--abd);background:var(--abg)">
-  <span><strong>Newer changes were saved from another device.</strong> Your last change here wasn't synced, to avoid overwriting them.</span>
-  <div class="bacts"><button class="btn" onclick="driveReloadLatest()">reload latest</button></div>
-</div>`:""}
-${drivePendingSync?`<div class="banner">
-  <span>You're offline — changes are saved on this device and will sync automatically once you're back online.</span>
-</div>`:""}
 <div class="tabs">
   <button class="tab tab-log${tab==="log"?" on":""}" onclick="setTab('log')">trade log</button>
   <span class="tabsep">|</span>
@@ -3315,12 +2543,12 @@ function setLogSort(col){
   else{logSort.col=col;logSort.dir=col==="date"?"desc":"asc";}
   render();
 }
+function setLogFilter(key,val){logFilters[key]=val;render();}
 function clearLogFilters(){logFilters={ticker:[],setup:[],wl:[],process:[],lossCat:[]};render();}
 function hasLogFilters(){return Object.values(logFilters).some(v=>v.length>0);}
 function uniqueTickersUsed(){
   return Array.from(new Set(trades.map(t=>t.ticker.toUpperCase()))).sort();
 }
-// item 1 (follow-up) — button-style filter dropdowns replacing native <select>s.
 function toggleLogFilterDropdown(key,ev){
   if(ev)ev.stopPropagation();
   logFilterOpen=logFilterOpen===key?null:key;
@@ -3341,33 +2569,8 @@ function clearOneLogFilter(key,ev){
   render();
 }
 function closeLogFilterDropdown(){if(logFilterOpen){logFilterOpen=null;render();}}
-// Relative option counts — for a given dropdown (key) and candidate value, counts
-// trades that match every OTHER currently-active filter (and the search box) plus
-// this specific value, so counts update live as other filters are picked (e.g.
-// picking ticker=MCL makes every other dropdown's counts reflect MCL-only trades).
-function countForFilterOption(key,val,list){
-  return list.filter(t=>{
-    if(key!=="ticker"&&logFilters.ticker.length&&!logFilters.ticker.includes((t.ticker||"").toUpperCase()))return false;
-    if(key!=="setup"&&logFilters.setup.length&&!logFilters.setup.includes(t.setup))return false;
-    if(key!=="wl"&&logFilters.wl.length&&!logFilters.wl.includes(t.wl))return false;
-    if(key!=="process"&&logFilters.process.length){
-      if(t.isGood===null||t.isGood===undefined)return false;
-      const procVal=t.isGood?"good":"bad";
-      if(!logFilters.process.includes(procVal))return false;
-    }
-    if(key!=="lossCat"&&logFilters.lossCat.length&&!logFilters.lossCat.includes(t.lossCat))return false;
-    if(!logSearchMatch(t))return false;
-    switch(key){
-      case"ticker":return(t.ticker||"").toUpperCase()===val;
-      case"setup":return t.setup===val;
-      case"wl":return t.wl===val;
-      case"process":return t.isGood!==null&&t.isGood!==undefined&&(t.isGood?"good":"bad")===val;
-      case"lossCat":return t.lossCat===val;
-      default:return false;
-    }
-  }).length;
-}
-function renderFilterBtn(key,allLabel,opts,list){
+document.addEventListener("click",()=>{if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen&&!logSearchLocked)closeLogSearch();if(refSearchOpen&&!refSearchLocked)closeRefSearch();});
+function renderFilterBtn(key,allLabel,opts){
   const cur=logFilters[key];
   const open=logFilterOpen===key;
   let curLabel=allLabel;
@@ -3379,18 +2582,13 @@ function renderFilterBtn(key,allLabel,opts,list){
     curLabel=`${match?match.label:cur[0]} +${cur.length-1}`;
   }
   return`<div class="filterdd-wrap">
-    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" aria-label="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
+    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" title="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
     ${open?`<div class="filterdd" onclick="event.stopPropagation()">
       <button class="filterdd-row" onclick="clearOneLogFilter('${key}',event)">${allLabel}</button>
-      ${opts.map(o=>`<label class="filterdd-row filterdd-check"><input type="checkbox" ${cur.includes(o.val)?"checked":""} onchange="toggleLogFilterValue('${key}','${o.val}',event)"/><span class="filterdd-label">${esc(o.label)}</span><span class="filterdd-count">(${list?countForFilterOption(key,o.val,list):0})</span></label>`).join("")}
+      ${opts.map(o=>`<label class="filterdd-row filterdd-check"><input type="checkbox" ${cur.includes(o.val)?"checked":""} onchange="toggleLogFilterValue('${key}','${o.val}',event)"/>${esc(o.label)}</label>`).join("")}
     </div>`:""}
   </div>`;
 }
-// item 1 (follow-up) — search icon/field toggle + live search-as-you-type.
-// logSearchLocked/refSearchLocked: once the person presses Enter in the search
-// box, it "holds" — stays open through outside clicks (e.g. expanding collapsed
-// rows one by one) instead of auto-closing — and only exits on Esc or clicking
-// the search icon again.
 function toggleLogSearch(ev){
   if(ev)ev.stopPropagation();
   logSearchOpen=!logSearchOpen;
@@ -3440,42 +2638,6 @@ function logSearchNav(dir,ev){
     if(el)el.scrollIntoView({behavior:"smooth",block:"center"});
   });
 }
-function toggleRefSearch(ev){
-  if(ev)ev.stopPropagation();
-  refSearchOpen=!refSearchOpen;
-  refSearchLocked=false;
-  if(!refSearchOpen)refSearchQuery="";
-  render();
-  if(refSearchOpen){
-    requestAnimationFrame(()=>{const el=document.getElementById("refsearch-input");if(el)el.focus();});
-  }
-}
-function closeRefSearch(){
-  if(!refSearchOpen)return;
-  refSearchOpen=false;refSearchQuery="";refSearchLocked=false;
-  render();
-}
-function onRefSearchInput(el){
-  refSearchQuery=el.value;
-  const pos=el.selectionStart;
-  render();
-  requestAnimationFrame(()=>{
-    const ni=document.getElementById("refsearch-input");
-    if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
-  });
-}
-function onRefSearchKeydown(ev){
-  if(ev.key==="Enter"){ev.preventDefault();refSearchLocked=true;}
-  else if(ev.key==="Escape"){ev.preventDefault();closeRefSearch();}
-}
-function refSearchMatch(r){
-  // Matches header label, entry date, and every section's question/answer text —
-  // not just what's visible without scrolling — same principle as logSearchMatch.
-  const q=refSearchQuery.trim().toLowerCase();
-  if(!q)return true;
-  const hay=[refHeaderLabel(r),ddmmyy(parseYMD(r.entryDate)),...nonEmptySections(r).flatMap(s=>[s.q,s.a])].filter(Boolean).join(" ").toLowerCase();
-  return hay.includes(q);
-}
 function logSearchMatch(t){
   // Matches everything in a trade, not just the columns visible in the collapsed
   // row — comments/notes only show once a row is expanded, but search still
@@ -3488,11 +2650,11 @@ function logSearchMatch(t){
 }
 function applyLogFilters(list){
   return list.filter(t=>{
-    if(logFilters.ticker.length&&!logFilters.ticker.includes((t.ticker||"").toUpperCase()))return false;
+    if(logFilters.ticker.length&&!logFilters.ticker.includes(t.ticker.toUpperCase()))return false;
     if(logFilters.setup.length&&!logFilters.setup.includes(t.setup))return false;
     if(logFilters.wl.length&&!logFilters.wl.includes(t.wl))return false;
     if(logFilters.process.length){
-      if(t.isGood===null||t.isGood===undefined)return false;
+      if(t.isGood===null)return false;
       const procVal=t.isGood?"good":"bad";
       if(!logFilters.process.includes(procVal))return false;
     }
@@ -3510,8 +2672,8 @@ function applyLogSort(list){
       case"setup":return t.setup||"";
       case"result":{const r=parseFloat(t.result);return isNaN(r)?-Infinity:r;}
       case"wl":return t.wl||"";
-      case"rules":return(t.rs===null||t.rs===undefined)?-1:t.rs;
-      case"process":return(t.isGood===null||t.isGood===undefined)?-1:(t.isGood?1:0);
+      case"rules":return t.rs===null?-1:t.rs;
+      case"process":return t.isGood===null?-1:(t.isGood?1:0);
       default:return t.date||"";
     }
   };
@@ -3551,41 +2713,35 @@ function logH(en){
     return`<th class="sortable${active?" sorted":""}" onclick="setLogSort('${h.key}')" title="sort by ${h.label}">${h.label}${arrow}</th>`;
   }).join("");
   return`<div>
-<div class="logfilterbar">
-  ${trades.length>0?`
-  <button class="topicon" onclick="toggleExpandAll()" aria-label="${anyExpanded?"collapse all":"expand all"}" data-tt="${anyExpanded?"collapse all":"expand all"}">${anyExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
-  <span class="topicon" style="cursor:default;margin-right:-4px" aria-label="filters">${ICON_FILTER}</span>
-  ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})),en)}
+${trades.length>0?`<div class="logfilterbar">
+  <button class="topicon" onclick="toggleExpandAll()" aria-label="${anyExpanded?"collapse all":"expand all"}" title="${anyExpanded?"collapse all":"expand all"}">${anyExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
+  ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})))}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})),en)}
+  ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})))}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("wl","all W/L",[{val:"Win",label:"Win"},{val:"Loss",label:"Loss"},{val:"BE",label:"Breakeven"}],en)}
+  ${renderFilterBtn("wl","all W/L",[{val:"Win",label:"Win"},{val:"Loss",label:"Loss"},{val:"BE",label:"Breakeven"}])}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}],en)}
+  ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}])}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})),en)}
-  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" aria-label="clear all filters">${ICON_X}</button>`:""}
-  `:""}
+  ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})))}
+  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" title="clear filters">${ICON_X}</button>`:""}
   <div class="logbaricons">
     <span class="searchwrap">
       ${logSearchOpen&&currentLogSearchMatches().length>0?`
-      <button class="topicon" onclick="logSearchNav(-1,event)" aria-label="previous match" data-tt="previous match">${ICON_TRILEFT}</button>
-      <button class="topicon" onclick="logSearchNav(1,event)" aria-label="next match" data-tt="next match">${ICON_TRIRIGHT}</button>
+      <button class="topicon" onclick="logSearchNav(-1,event)" aria-label="previous match" title="previous match">${ICON_TRILEFT}</button>
+      <button class="topicon" onclick="logSearchNav(1,event)" aria-label="next match" title="next match">${ICON_TRIRIGHT}</button>
       `:""}
-      ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="" value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)" onkeydown="onLogSearchKeydown(event)"/></span>`
-      :`<button class="topicon" onclick="toggleLogSearch(event)" aria-label="search trades" data-tt="search trades">${ICON_SEARCH}</button>`}
+      ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="search trades..." value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)" onkeydown="onLogSearchKeydown(event)"/></span>`
+      :`<button class="topicon" onclick="toggleLogSearch(event)" title="search trades">${ICON_SEARCH}</button>`}
     </span>
-    <span class="iconsep">|</span>
-    <button class="topicon" onclick="tog()" aria-label="${showForm?"cancel":"add trade"}" data-tt="${showForm?"cancel":"add trade"}">${showForm?ICON_X:ICON_PLUS}</button>
+    <span class="iconsep" data-edit="1">|</span>
+    <button class="topicon" data-edit="1" onclick="tog()" title="${showForm?"cancel":"add trade"}">${showForm?ICON_X:ICON_PLUS}</button>
   </div>
-</div>
+</div>`:""}
 
 ${showForm?`
 <div class="fcard">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-    <span style="font-size:var(--fmd);font-weight:700">${editingId!==null?"edit trade":"new trade entry"}</span>
-    <button class="topicon" onclick="addTrade()" aria-label="${editingId!==null?"save changes":"log trade"}" data-tt="${editingId!==null?"save changes":"log trade"}">${ICON_SAVE}</button>
-  </div>
+  <div style="font-size:var(--fmd);font-weight:700;margin-bottom:1rem">${editingId!==null?"edit trade":"new trade entry"}</div>
   <div class="fsec" style="margin-top:0;padding-top:0;border-top:none">trade details</div>
   <div class="fgrid">
     <div class="field"><label>date</label><input id="fi-date" type="date" value="${form.date}"/></div>
@@ -3671,10 +2827,10 @@ ${logList.map(t=>{
 <td>${t.exit?`$${f2(t.exit)}`:"—"}</td>
 <td style="font-weight:700;color:${rc}">${!isNaN(res)?cuNoSign(res):"—"}</td>
 <td>${t.wl?`<span class="pill p${t.wl.toLowerCase()}">${t.wl}</span>`:"—"}</td>
-<td><div class="rulesflex"><span class="spill" style="background:${bg};color:${col};border:.5px solid ${bd}" title="rules followed">${sl}</span>${t.comments&&t.comments.trim()?`<span title="has comment">📝</span>`:""}${t.screenshots&&t.screenshots.length>0?`<span title="has screenshots">📷</span>`:""}</div></td>
+<td><div class="rulesflex"><span class="spill" style="background:${bg};color:${col};border:.5px solid ${bd}" title="rules followed">${sl}</span>${t.comments&&t.comments.trim()?`<span title="has comment">📝</span>`:""}${t.screenshots&&t.screenshots.length>0?`<span title="has screenshots">📷${t.screenshots.length}</span>`:""}</div></td>
 <td>${t.isGood!==null?`<span class="pill ${t.isGood?"pgood":"pbad"}">${t.isGood?"Good":"Bad"}</span>`:"—"}</td>
-<td><button class="delbtn" onclick="event.stopPropagation();editTrade(${t.id})" title="edit trade">✎</button></td>
-<td><button class="delbtn" onclick="event.stopPropagation();del(${t.id})" title="delete trade">×</button></td>
+<td><button class="delbtn" data-edit="1" onclick="event.stopPropagation();editTrade(${t.id})" title="edit trade">✎</button></td>
+<td><button class="delbtn" data-edit="1" onclick="event.stopPropagation();del(${t.id})" title="delete trade">×</button></td>
 </tr>`;
   return row+(expandedIds.has(t.id)?expandRowH(t):"");
 }).join("")}
@@ -3685,8 +2841,6 @@ ${trades.length>0?`<div class="lcountbottom">${logList.length} of ${trades.lengt
 
 // ── Dashboard tab ─────────────────────────────────────────────────────────────
 const SEP=`<span class="statsep">|</span>`;
-// Every stat card is regular weight/smaller now except the P&L cell (opts.hero),
-// which keeps the bold, larger treatment so it still reads as the headline number.
 function statCard(label,value,color,opts){
   opts=opts||{};
   const valCls=opts.hero?"sval sval-hero":"sval";
@@ -3694,6 +2848,7 @@ function statCard(label,value,color,opts){
   const sub=opts.sub?`<div class="svalsub" style="color:${opts.subColor||"var(--t2)"}">${opts.sub}</div>`:"";
   return`<div class="scard${opts.cardClass?" "+opts.cardClass:""}"><div class="slabel">${label.toUpperCase()}</div><div class="pbody">${bar}<div class="${valCls}" style="color:${color||"var(--t)"}">${value}</div>${sub}</div></div>`;
 }
+
 function statGridH(s,title,ec,bc,em){
   const netColor=s.net>=0?"var(--g)":"var(--r)";
   const wrColor=s.wr!==null?(s.wr>=.5?"var(--g)":"var(--r)"):"var(--t3)";
@@ -3726,14 +2881,41 @@ function dashH(s,en,ec,bc,em){
   const curLbl=st.current===0?"—":`${st.current}${st.type==="Win"?"W":"L"}`;
 
   return`<div>
-${calendarH(en,{collapsible:true,collapsed:calendarCollapsed,label:"calendar"})}
-
-<p class="seclab">stats</p>
 <div class="dashSplit">
   <div id="dash-stat-col">${statGridH(s,periodTitle,ec,bc,em)}</div>
   <div class="bpanel eq-panel-auto" id="dash-eq-panel" style="margin-bottom:0">
     <div class="plbl" style="margin-bottom:8px">equity curve</div>
     <div class="eq-outer" id="dash-eq-outer"></div>
+  </div>
+</div>
+
+${calendarH(en,{collapsible:true,collapsed:calendarCollapsed,label:"calendar"})}
+
+<div class="dgrid">
+  <div class="panel" style="display:flex;flex-direction:column">
+    <div class="plbl">your edge</div>
+    <div class="pbody">
+      <div class="bval" style="color:${ec}">${s.edge!==null?cu(s.edge):"—"}</div>
+      <div class="bsub" style="color:${ec};margin-bottom:0">${s.edge===null?"no data yet":s.edge>0?"positive edge ↑":"negative edge ↓"}</div>
+    </div>
+  </div>
+  <div class="panel" style="display:flex;flex-direction:column">
+    <div class="plbl">rule execution</div>
+    <div class="pbody" style="width:100%">
+      <div class="bval" style="color:${bc}">${s.ep!==null?pc(s.ep):"—"}</div>
+      <div class="ptrack" style="width:100%"><div class="pbar" style="width:${s.ep!==null?(s.ep*100).toFixed(1)+"%":"0%"};background:${bc}"></div></div>
+      <div class="emsg" style="color:${bc}">${em}</div>
+    </div>
+  </div>
+  <div class="panel" style="display:flex;flex-direction:column">
+    <div class="plbl">avg hold time</div>
+    <div class="pbody"><div class="bval">${s.adur!==null?fdur(s.adur):"—"}</div></div>
+  </div>
+  <div class="panel">
+    <div class="plbl">streaks</div>
+    <div class="rsrow"><span class="rsname">Current</span><span class="rspct" style="color:${curCol}">${curLbl}</span></div>
+    <div class="rsrow"><span class="rsname">Max Win</span><span class="rspct" style="color:var(--g)">${st.maxWin||"—"}</span></div>
+    <div class="rsrow"><span class="rsname">Max Loss</span><span class="rspct" style="color:var(--r)">${st.maxLoss||"—"}</span></div>
   </div>
 </div>
 
@@ -3770,8 +2952,8 @@ ${calendarH(en,{collapsible:true,collapsed:calendarCollapsed,label:"calendar"})}
   <div class="bpanel" style="margin-bottom:0">
     <div class="plbl" style="margin-bottom:14px">disqualifiers <span style="text-transform:none;color:var(--t3);letter-spacing:0"> — what would your P&L look like without these?</span></div>
     <div class="dgrid" style="grid-template-columns:1fr 1fr;margin-bottom:16px">
-      <div style="padding:14px 14px 4px"><div class="slabel" style="font-size:var(--fxs)">clean (${s.cleanTrades})</div><div class="sval" style="color:${s.cleanPnl>=0?"var(--g)":"var(--r)"}">${cu(s.cleanPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px;text-align:center">${s.cleanW}W ${cu(s.cleanGrossWin)} · ${s.cleanL}L ${cu(s.cleanGrossLoss)}</div></div>
-      <div style="padding:14px 14px 4px"><div class="slabel" style="font-size:var(--fxs)">violated (${s.violTrades})</div><div class="sval" style="color:${s.violPnl>=0?"var(--g)":"var(--r)"}">${cu(s.violPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px;text-align:center">${s.violW}W ${cu(s.violGrossWin)} · ${s.violL}L ${cu(s.violGrossLoss)}</div></div>
+      <div style="padding:14px 14px 4px"><div class="slabel">clean (${s.cleanTrades})</div><div class="sval" style="color:${s.cleanPnl>=0?"var(--g)":"var(--r)"}">${cu(s.cleanPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px">${s.cleanW}W ${cu(s.cleanGrossWin)} · ${s.cleanL}L ${cu(s.cleanGrossLoss)}</div></div>
+      <div style="padding:14px 14px 4px"><div class="slabel">violated (${s.violTrades})</div><div class="sval" style="color:${s.violPnl>=0?"var(--g)":"var(--r)"}">${cu(s.violPnl)}</div><div style="font-size:var(--fxs);color:var(--t3);margin-top:6px">${s.violW}W ${cu(s.violGrossWin)} · ${s.violL}L ${cu(s.violGrossLoss)}</div></div>
     </div>
     ${s.violTrades>0?`<div class="qwarn" style="margin-bottom:16px">Removing violated trades would change P&L by ${cu(-s.violPnl)}.</div>`:`<div class="dqok" style="margin-bottom:16px">no disqualifier violations logged yet</div>`}
     ${s.dqStats.some(d=>d.total>0)?`<div>
@@ -3797,15 +2979,8 @@ ${en.length>0?`
 ${SETUPS.map(setup=>{
   const ts=en.filter(t=>t.setup===setup),ws=ts.filter(t=>t.wl==="Win"),ls=ts.filter(t=>t.wl==="Loss"),wr=(ws.length+ls.length)>0?ws.length/(ws.length+ls.length):null;
   const c=wr===null?"var(--t3)":wr>=.5?"var(--g)":"var(--r)";
-  return`<div class="setupcard"><div class="slabel">${setup}</div><div class="pbody"><div class="sval" style="color:${c}">${wr!==null?pc(wr):"—"}</div><div class="svalsub" style="font-weight:300;font-style:italic">(${ts.length} trade${ts.length!==1?"s":""})</div></div></div>`;
+  return`<div class="setupcard"><div class="setupname">${setup}</div><div class="setuptrades">${ts.length} trade${ts.length!==1?"s":""}</div><div class="setupwr" style="color:${c}">${wr!==null?pc(wr):"—"}</div></div>`;
 }).join("")}
-<div class="setupcard"><div class="slabel">Avg Hold Time</div><div class="pbody"><div class="sval">${s.adur!==null?fdur(s.adur):"—"}</div></div></div>
-<div class="setupcard streakcard">
-  <div class="seclab" style="position:absolute;top:-24px;left:0;margin:0;white-space:nowrap">streak</div>
-  <div class="rsrow" style="padding:4px 0"><span class="rsname">Current</span><span class="rspct" style="color:${curCol}">${curLbl}</span></div>
-  <div class="rsrow" style="padding:4px 0"><span class="rsname">Max Win</span><span class="rspct" style="color:var(--g)">${st.maxWin||"—"}</span></div>
-  <div class="rsrow" style="padding:4px 0;border-bottom:none"><span class="rsname">Max Loss</span><span class="rspct" style="color:var(--r)">${st.maxLoss||"—"}</span></div>
-</div>
 </div>
 
 <p class="seclab">performance breakdown <span style="text-transform:none;color:var(--t3)">— win % and avg realized R alongside $ P&L</span></p>
@@ -3829,6 +3004,42 @@ ${SETUPS.map(setup=>{
 }
 
 // ── Reflection tab ────────────────────────────────────────────────────────────
+function toggleRefSearch(ev){
+  if(ev)ev.stopPropagation();
+  refSearchOpen=!refSearchOpen;
+  refSearchLocked=false;
+  if(!refSearchOpen)refSearchQuery="";
+  render();
+  if(refSearchOpen){
+    requestAnimationFrame(()=>{const el=document.getElementById("refsearch-input");if(el)el.focus();});
+  }
+}
+function closeRefSearch(){
+  if(!refSearchOpen)return;
+  refSearchOpen=false;refSearchQuery="";refSearchLocked=false;
+  render();
+}
+function onRefSearchInput(el){
+  refSearchQuery=el.value;
+  const pos=el.selectionStart;
+  render();
+  requestAnimationFrame(()=>{
+    const ni=document.getElementById("refsearch-input");
+    if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
+  });
+}
+function onRefSearchKeydown(ev){
+  if(ev.key==="Enter"){ev.preventDefault();refSearchLocked=true;}
+  else if(ev.key==="Escape"){ev.preventDefault();closeRefSearch();}
+}
+function refSearchMatch(r){
+  // Matches header label, entry date, and every section's question/answer text —
+  // not just what's visible without scrolling — same principle as logSearchMatch.
+  const q=refSearchQuery.trim().toLowerCase();
+  if(!q)return true;
+  const hay=[refHeaderLabel(r),ddmmyy(parseYMD(r.entryDate)),...nonEmptySections(r).flatMap(s=>[s.q,s.a])].filter(Boolean).join(" ").toLowerCase();
+  return hay.includes(q);
+}
 function reflectionH(){
   const list=getFilteredReflections().filter(refSearchMatch);
   const preSearchList=getFilteredReflections();
@@ -3839,10 +3050,10 @@ function reflectionH(){
   <div class="logbaricons">
     <span class="searchwrap">
       ${refSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="refsearch-input" placeholder="" value="${escAttr(refSearchQuery)}" oninput="onRefSearchInput(this)" onkeydown="onRefSearchKeydown(event)"/></span>`
-      :`<button class="topicon" onclick="toggleRefSearch(event)" aria-label="search reflections" data-tt="search reflections">${ICON_SEARCH}</button>`}
+      :`<button class="topicon" onclick="toggleRefSearch(event)" aria-label="search reflections" title="search reflections">${ICON_SEARCH}</button>`}
     </span>
-    <span class="iconsep">|</span>
-    <button class="topicon" onclick="toggleRefForm()" aria-label="${showRefForm?"cancel":"add reflection"}" data-tt="${showRefForm?"cancel":"add reflection"}">${showRefForm?ICON_X:ICON_PLUS}</button>
+    <span class="iconsep" data-edit="1">|</span>
+    <button class="topicon" data-edit="1" onclick="toggleRefForm()" aria-label="${showRefForm?"cancel":"add reflection"}" title="${showRefForm?"cancel":"add reflection"}">${showRefForm?ICON_X:ICON_PLUS}</button>
   </div>
 </div>
 
@@ -3853,7 +3064,7 @@ ${showRefForm?`
     <button class="pbtn${refForm.periodType==="week"?" on":""}" onclick="setRefPeriodType('week')">weekly</button>
     <button class="pbtn${refForm.periodType==="month"?" on":""}" onclick="setRefPeriodType('month')">monthly</button>
   </div>
-  <div class="fgrid" style="max-width:460px;margin-bottom:20px">
+  <div class="fgrid" style="max-width:460px;margin-bottom:8px">
     ${refForm.periodType==="week"
       ?`<div class="field"><label>week containing</label><input id="rf-weekdate" type="date" value="${refForm.periodDate}" onchange="updateRefPeriodDate()"/></div>`
       :`<div class="field"><label>month</label><input id="rf-monthdate" type="month" value="${refForm.periodDate.slice(0,7)}" onchange="updateRefPeriodDate()"/></div>`}
@@ -3887,10 +3098,10 @@ ${reflections.length===0
   <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:18px">
     <span style="font-size:var(--fsm);color:var(--refhead);font-weight:700;letter-spacing:.03em">${hl(refHeaderLabel(r),refSearchQuery)}</span>
     <div style="display:flex;align-items:center;gap:12px">
-      <span style="font-size:var(--fxs);color:var(--t3);font-style:italic">entry date: ${hl(ddmmyy(parseYMD(r.entryDate)),refSearchQuery)}</span>
+      <span style="font-size:var(--fxs);color:var(--t3)">entry date: ${hl(ddmmyy(parseYMD(r.entryDate)),refSearchQuery)}</span>
       <div style="display:flex;gap:2px">
-        <button class="delbtn" onclick="editReflection(${r.id})" title="edit reflection">✎</button>
-        <button class="delbtn" onclick="delReflection(${r.id})" title="delete reflection">×</button>
+        <button class="delbtn" data-edit="1" onclick="editReflection(${r.id})" title="edit reflection">✎</button>
+        <button class="delbtn" data-edit="1" onclick="delReflection(${r.id})" title="delete reflection">×</button>
       </div>
     </div>
   </div>
@@ -3903,10 +3114,37 @@ ${reflections.length===0
 </div>`;
 }
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
-load();
-render();
-attemptDriveAutoConnect();
+// ── Boot (read-only: load from the shared Google Drive file) ───────────────────
+let driveModifiedTime=null; // item 8 — Drive's own modifiedTime for the mirror file, shown as "last synced"
+async function loadFromDrive(){
+  // item 5 — replaces the earlier generic loading text with a thin, small,
+  // italic "loading viewer journal..." (deferred the original loading-skeleton
+  // ask; this is the smaller replacement that was scoped in instead).
+  document.getElementById("app").innerHTML=`<div style="padding:3rem;text-align:center;color:var(--t2);font-weight:300;font-size:var(--fsm);font-style:italic">loading viewer journal...</div>`;
+  try{
+    const contentUrl=`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?alt=media&key=${DRIVE_API_KEY}`;
+    const metaUrl=`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?fields=modifiedTime&key=${DRIVE_API_KEY}`;
+    const [contentRes,metaRes]=await Promise.all([fetch(contentUrl),fetch(metaUrl)]);
+    if(!contentRes.ok)throw new Error("Drive fetch failed: "+contentRes.status);
+    const d=await contentRes.json();
+    if(Array.isArray(d.trades))trades=d.trades.map(migrateTrade);
+    if(d.dq&&d.dq.length)dq=d.dq;
+    if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);
+    // item 8 — non-fatal if this one fails; the journal content is what matters,
+    // "last synced" just falls back to "—" via fmtSyncTime(null) if it's missing.
+    if(metaRes.ok){
+      const meta=await metaRes.json();
+      driveModifiedTime=meta.modifiedTime||null;
+    }
+  }catch(e){
+    document.getElementById("app").innerHTML=`<div style="padding:3rem;text-align:center;color:var(--r)">Couldn't load the shared journal right now.<br/><span style="color:var(--t3);font-size:var(--fsm)">${e.message||e}</span></div>`;
+    return;
+  }
+  document.body.classList.add("readonly-mode");
+  render();
+}
+setFavicon();
+loadFromDrive();
 </script>
 </body>
 </html>
