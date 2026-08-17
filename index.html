@@ -65,9 +65,12 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .themetoggle{width:16px;height:16px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 /* Fast custom tooltip — shows immediately on hover via CSS rather than relying on
    the native title attribute, whose browser-controlled delay made it feel like it
-   only worked "sometimes". title= is kept alongside data-tt as an accessible fallback. */
+   only worked "sometimes". aria-label is kept alongside data-tt as an accessible
+   fallback (screen readers only — it renders no visual popup of its own), so this
+   is the only visible tooltip; colored to match the dashboard/connected-icon
+   mauve (light) / powder-blue (dark) overlay instead of a plain black/white box. */
 [data-tt]{position:relative}
-[data-tt]::after{content:attr(data-tt);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--t);color:var(--bg);font-size:11px;font-weight:500;line-height:1.3;padding:5px 9px;border-radius:6px;white-space:nowrap;max-width:220px;opacity:0;pointer-events:none;transition:opacity .1s;z-index:80;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+[data-tt]::after{content:attr(data-tt);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--tabdashbg);color:var(--tabdash);border:.5px solid var(--tabdashbd);font-size:11px;font-weight:500;line-height:1.3;padding:5px 9px;border-radius:6px;white-space:nowrap;max-width:220px;opacity:0;pointer-events:none;transition:opacity .1s;z-index:80;box-shadow:0 4px 14px rgba(0,0,0,.22)}
 [data-tt]:hover::after{opacity:1;transition-delay:.15s}
 .themetoggle:hover{opacity:.75}
 .themetoggle svg{width:16px;height:16px;display:block}
@@ -228,6 +231,8 @@ td{padding:10px;vertical-align:middle;white-space:nowrap}
 .pbody{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;width:100%}
 .setuprow .pbody .sval{flex:0 1 auto}
 .setuprow .svalsub{margin-top:6px}
+.tightsub .pbody .sval{flex:0 1 auto}
+.tightsub .svalsub{margin-top:6px}
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:1.25rem}
 .row2col{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:1.25rem}
 .row2colEq{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem}
@@ -267,7 +272,7 @@ td{padding:10px;vertical-align:middle;white-space:nowrap}
 .statsep{color:var(--t3);margin:0 7px;font-weight:400}
 .setuprow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:stretch}
 .setupcard{flex:1;min-width:90px;background:var(--s2);border-radius:var(--rad);padding:10px 14px;min-height:76px;display:flex;flex-direction:column}
-.setupcard.streakcard{justify-content:flex-start}
+.setupcard.streakcard{justify-content:flex-start;position:relative}
 .refcard{background:var(--s2);border:.5px solid var(--bd);border-radius:var(--radl);padding:1.1rem}
 .refq{font-size:var(--fbase);font-weight:600;margin-bottom:6px}
 textarea{width:100%;font-family:var(--sans);font-size:var(--fbase);padding:9px 11px;border:.5px solid var(--bdm);border-radius:var(--rad);background:var(--surface);color:var(--t);resize:vertical;line-height:1.6;outline:none;margin-bottom:12px}
@@ -356,7 +361,7 @@ thead th.sortable:hover{color:var(--t)}
 thead th.sortable.sorted{color:var(--t)}
 .sortarrow{color:var(--p);margin-left:3px}
 /* Fixed-width rules-score pill so trailing icons never shift with digit count */
-.spill{min-width:42px;justify-content:center}
+.spill{width:44px;justify-content:center}
 .rulesflex{display:flex;align-items:center;gap:5px}
 /* Collapsible stats/equity-curve section (export summary) */
 details.statsdetails{margin-bottom:1.75rem}
@@ -434,6 +439,11 @@ let driveAbortController=null;    // manual hard-stop — the in-flight request'
 let driveForceStopped=false;      // set right before aborting so the resulting fetch rejection doesn't surface as a scary error
 let driveWatchdogTimer=null;      // safety net — auto force-stops a connect/sync that never resolves (e.g. a silently-blocked
                                    // Google prompt:"none" request), instead of spinning forever with no way out
+// sanity-check fix (items 4/6) — which flow a pending requestAccessToken() call belongs to, so the
+// shared error_callback (popup closed / blocked) knows how to recover: "connect" reverts to the plain
+// connect icon, "switch" reverts to the previously-connected state, "auto"/"refresh" fail quietly.
+let driveAttemptKind=null;
+let driveSwitchPrevEmail=null;    // snapshot of the email before "switch account" nulls it, restored if that attempt is abandoned
 const DRIVE_AUTO_BACKUP_KEY="wss_drive_last_backup"; // item 7
 const DRIVE_BACKUP_INTERVAL_DAYS=7;
 const DRIVE_BACKUP_PRUNE_DAYS=60;
@@ -516,6 +526,7 @@ function storageInfo(){
 function migrateTrade(t){
   return{
     ...t,
+    ticker: t.ticker||"",
     entryTime: t.entryTime!==undefined&&t.entryTime!==null?t.entryTime:(t.time||""),
     exitTime: t.exitTime||"",
     direction: t.direction||"long",
@@ -594,7 +605,7 @@ function fmtSyncTime(iso){
 // (and the dropdown behind it) can be stuck indefinitely. 20s is generous for
 // any real network round trip but short enough to never look "hung."
 function driveClearWatchdog(){if(driveWatchdogTimer){clearTimeout(driveWatchdogTimer);driveWatchdogTimer=null;}}
-function driveStartWatchdog(){
+function driveStartWatchdog(ms){
   driveClearWatchdog();
   driveWatchdogTimer=setTimeout(()=>{
     driveWatchdogTimer=null;
@@ -605,9 +616,10 @@ function driveStartWatchdog(){
     clearDriveRetry();
     driveConnecting=false;driveSyncing=false;driveSaveInFlight=false;driveSaveQueued=false;
     drivePendingSync=false;driveStaleConflict=false;driveMenuOpen=false;
+    driveAttemptKind=null;driveSwitchPrevEmail=null;
     driveSyncError="connection timed out — click connect to try again";
     render();
-  },20000);
+  },ms||20000);
 }
 // item 6 — every non-"never connected" state (connecting/syncing, error, offline,
 // connected) opens this same fixed dropdown: email, switch account, disconnect,
@@ -616,35 +628,48 @@ function driveStartWatchdog(){
 // the same way, so there's always a way out no matter what state it's stuck in.
 function driveStatusHtml(){
   if(driveConnecting||driveSyncing)return`<span class="drivemenu-wrap">
-    <button class="topicon spin" onclick="toggleDriveMenu(event)" title="${driveConnecting?"connecting…":"syncing…"} — click for options" data-tt="${driveConnecting?"connecting…":"syncing…"} (click for options)"><span class="spin-ico">${DRIVE_SPIN_SVG}</span></button>
+    <button class="topicon spin" onclick="toggleDriveMenu(event)" aria-label="${driveConnecting?"connecting":"syncing"} — click for options"><span class="spin-ico">${DRIVE_SPIN_SVG}</span></button>
     ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
-  if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" title="newer changes were saved from another device — click to reload them" data-tt="newer changes saved elsewhere — click to reload">${ICON_WARN}</button>`;
+  if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" aria-label="newer changes were saved from another device — click to reload them" data-tt="newer changes saved elsewhere — click to reload">${ICON_WARN}</button>`;
   if(drivePendingSync)return`<span class="drivemenu-wrap">
-    <button class="topicon warn" onclick="toggleDriveMenu(event)" title="offline — your changes are saved locally and will sync automatically once you're back online — click for options" data-tt="offline — will sync automatically (click for options)">${ICON_CLOCK}</button>
+    <button class="topicon warn" onclick="toggleDriveMenu(event)" aria-label="offline — your changes are saved locally and will sync automatically once you're back online — click for options" data-tt="offline — will sync automatically (click for options)">${ICON_CLOCK}</button>
     ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
   if(driveSyncError)return`<span class="drivemenu-wrap">
-    <button class="topicon err" onclick="toggleDriveMenu(event)" title="${escAttr(driveSyncError)} — click for options" data-tt="${escAttr(driveSyncError)} (click for options)">${DRIVE_ERR_SVG}</button>
+    <button class="topicon err" onclick="toggleDriveMenu(event)" aria-label="${escAttr(driveSyncError)} — click for options" data-tt="${escAttr(driveSyncError)} (click for options)">${DRIVE_ERR_SVG}</button>
     ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
   if(driveConnected)return`<span class="drivemenu-wrap">
-    <button class="topicon ok" onclick="toggleDriveMenu(event)" title="connected to Google Drive — click for account options" data-tt="connected — click for account options">${ICON_CHECK}</button>
+    <button class="topicon ok" onclick="toggleDriveMenu(event)" aria-label="connected to Google Drive — click for account options" data-tt="connected — click for account options">${ICON_CHECK}</button>
     ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
-  return`<button class="topicon" onclick="connectDrive()" title="connect Google Drive" data-tt="connect Google Drive">${ICON_LINK}</button>`;
+  return`<button class="topicon" onclick="connectDrive()" aria-label="connect Google Drive" data-tt="connect Google Drive">${ICON_LINK}</button>`;
 }
 // item 6 — the one fixed dropdown shared by every state above: email (only
-// shown here, never at rest on the topbar), switch account, disconnect, force
-// stop (red), and last synced.
+// shown here, never at rest on the topbar), retry, switch account, disconnect,
+// force stop (red), and last synced.
 function driveMenuHtml(){
   return`<div class="drivemenu" onclick="event.stopPropagation()">
     <div class="drivemenu-email">${driveUserEmail?esc(driveUserEmail):"…"}</div>
+    <button class="drivemenu-row" onclick="driveRetry()">${DRIVE_SPIN_SVG} retry</button>
     <button class="drivemenu-row" onclick="switchDriveAccount()">switch account</button>
     <button class="drivemenu-row" onclick="disconnectDrive()">disconnect</button>
     <button class="drivemenu-row" style="color:var(--r)" onclick="driveForceStop()">${ICON_X} force stop</button>
     <div class="drivemenu-synced">last synced: ${fmtSyncTime(driveKnownModifiedTime)}</div>
   </div>`;
+}
+// sanity-check fix (item 5) — always-visible manual "push it again" row. Branches on
+// current state: never connected → run the normal connect flow; a real conflict →
+// pull latest (same action the stale-conflict icon itself triggers); anything else
+// (offline, a stuck sync error, or even a perfectly healthy connection) → force a
+// fresh save/sync pass right now instead of waiting for the next edit or the 20s
+// auto-retry tick.
+function driveRetry(){
+  closeDriveMenu();
+  if(!driveConnected){connectDrive();return;}
+  if(driveStaleConflict){driveReloadLatest();return;}
+  driveSaveAll();
 }
 function toggleDriveMenu(ev){
   if(ev)ev.stopPropagation();
@@ -742,9 +767,10 @@ async function attemptDriveAutoConnect(){
                          // browser (blocked third-party cookies, etc.) and never
                          // call back at all — without this, that leaves the spinner
                          // stuck forever with no way to recover but a hard refresh.
+  driveAttemptKind="auto";
   tc.callback=async(resp)=>{
     if(driveForceStopped)return; // user hit stop while this was still waiting on Google — discard the late response
-    driveClearWatchdog();
+    driveClearWatchdog();driveAttemptKind=null;
     if(resp.error){
       driveConnecting=false;driveSyncError="";
       renderDriveStatus();
@@ -756,10 +782,41 @@ async function attemptDriveAutoConnect(){
   };
   tc.requestAccessToken({prompt:"none"});
 }
+// sanity-check fix (items 4/6) — root cause of the "endless syncing loop": GIS never
+// calls the regular callback at all if the popup is closed before finishing or gets
+// blocked outright, so nothing ever flipped driveConnecting back off. error_callback
+// is GIS's dedicated hook for exactly those two non-OAuth cases (confirmed against
+// Google's current js-reference docs: types are "popup_closed" and
+// "popup_failed_to_open"). driveAttemptKind (set right before every
+// requestAccessToken() call below) tells this shared handler how to recover:
+// "connect" → back to the plain connect icon, no error (a closed popup was a
+// deliberate bail, not a failure); "switch" → back to the previously-connected
+// state with the original email restored, not stuck mid-switch; "auto"/"refresh"
+// (the silent background paths) → fail quietly either way, matching how they
+// already treat a resp.error. A blocked popup gets a real message either way,
+// since that's not the person choosing to back out.
+function driveTokenErrorCallback(err){
+  const kind=driveAttemptKind;
+  driveAttemptKind=null;
+  driveClearWatchdog();
+  if(driveForceStopped){driveForceStopped=false;return;}
+  const blocked=err&&err.type==="popup_failed_to_open";
+  driveConnecting=false;
+  if(kind==="switch"){
+    driveUserEmail=driveSwitchPrevEmail;driveSwitchPrevEmail=null;
+    driveSyncError=blocked?"popup blocked — allow popups for this site and try switching again":"";
+  }else if(kind==="connect"){
+    driveSyncError=blocked?"popup blocked — allow popups for this site and click connect again":"";
+  }else{
+    // "auto" / "refresh" / unknown — background paths fail quietly, no banner
+    driveSyncError="";
+  }
+  renderDriveStatus();
+}
 function ensureDriveTokenClient(){
   if(driveTokenClient)return driveTokenClient;
   if(typeof google==="undefined"||!google.accounts||!google.accounts.oauth2)return null;
-  driveTokenClient=google.accounts.oauth2.initTokenClient({client_id:DRIVE_CLIENT_ID,scope:DRIVE_SCOPES,callback:""});
+  driveTokenClient=google.accounts.oauth2.initTokenClient({client_id:DRIVE_CLIENT_ID,scope:DRIVE_SCOPES,callback:"",error_callback:driveTokenErrorCallback});
   return driveTokenClient;
 }
 // item 9 — mid-session token refresh. GIS access tokens live ~1hr; item 1 only
@@ -784,7 +841,9 @@ function silentDriveTokenRefresh(){
   if(!tc)return; // GIS unavailable right now — falls through to the existing
                   // failure surface: the next Drive call with the stale token
                   // 401s and shows as a sync error, same as before item 9 existed.
+  driveAttemptKind="refresh";
   tc.callback=(resp)=>{
+    driveAttemptKind=null;
     if(resp.error)return; // silent refresh failed (session signed out elsewhere,
     // access revoked) — fails quietly, no popup, no alarming message. No data
     // is lost either way: saves already write to localStorage first (Phase 1),
@@ -803,9 +862,16 @@ function connectDrive(){
     return;
   }
   driveForceStopped=false; // clear any stale force-stop from a previous attempt, or this new attempt's callback will silently no-op forever
+  driveAttemptKind="connect";
   driveConnecting=true;driveSyncError="";renderDriveStatus();
+  // sanity-check fix (items 4/6) — this used to have no watchdog at all (only the
+  // silent auto-reconnect path did), so an abandoned/blocked popup with no
+  // error_callback support would've spun forever. 2 minutes is generous for a
+  // real passkey/2FA/captcha round trip, short enough to never look permanently stuck.
+  driveStartWatchdog(120000);
   tc.callback=async(resp)=>{
     if(driveForceStopped)return;
+    driveClearWatchdog();driveAttemptKind=null;
     if(resp.error){
       driveConnecting=false;
       driveSyncError="sign-in failed ("+resp.error+")";
@@ -831,15 +897,21 @@ function switchDriveAccount(){
     return;
   }
   driveForceStopped=false; // see connectDrive() — must clear before a fresh attempt or the callback silently no-ops
+  driveAttemptKind="switch";
+  driveSwitchPrevEmail=driveUserEmail; // snapshot — restored by driveTokenErrorCallback if this attempt is abandoned
   driveConnecting=true;driveSyncError="";driveUserEmail=null;renderDriveStatus();
+  driveStartWatchdog(120000); // see connectDrive() — same reasoning
   tc.callback=async(resp)=>{
     if(driveForceStopped)return;
+    driveClearWatchdog();driveAttemptKind=null;
     if(resp.error){
       driveConnecting=false;
+      driveUserEmail=driveSwitchPrevEmail;driveSwitchPrevEmail=null; // restore — this was never actually a disconnect
       driveSyncError="switch account failed ("+resp.error+")";
       renderDriveStatus();
       return;
     }
+    driveSwitchPrevEmail=null;
     driveAccessToken=resp.access_token;
     cacheDriveToken(resp.access_token,resp.expires_in);
     await driveConnectFlow();
@@ -863,6 +935,7 @@ function driveFullTeardown(){
   driveTokenExpiresAt=0;clearDriveRefreshTimer();              // item 9
   setMirrorDirty(false);                                       // item 3
   driveSaveInFlight=false;driveSaveQueued=false;                // item 10
+  driveAttemptKind=null;driveSwitchPrevEmail=null;
   clearDriveRetry();
   clearCachedDriveToken();
   driveAutoConnectAttempted=true; // an explicit disconnect/force-stop should stick — don't silently reconnect on the next reload
@@ -2075,30 +2148,6 @@ function confirmExportSummary(){
 function expData(){const b=new Blob([JSON.stringify({trades,reflections,dq},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`J.'s TS A${ddmmyy(new Date())}.json`;a.click();}
 function impData(){const i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.trades)trades=d.trades.map(migrateTrade);if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);else if(d.ref&&(d.ref.best||d.ref.broke||d.ref.improve))reflections=[migrateReflection({id:Date.now(),date:td(),best:d.ref.best||"",broke:d.ref.broke||"",improve:d.ref.improve||""})];if(d.dq&&d.dq.length)dq=d.dq;save();render();}catch(e){alert("Invalid file.")}};r.readAsText(f);};i.click();}
 
-function expCSV(){
-  const list=getFilteredTrades();
-  const rh=RULES.map(r=>`"${r.text}"`).join(",");
-  const dh=dq.map(d=>`"DQ: ${d.text}"`).join(",");
-  const hdr=`Date,Entry Time,Exit Time,Ticker,Direction,Setup,Contracts,Entry,Stop,Target,Exit,Risk $,Reward $,Planned RR,Realized R,Result,W/L,Duration (min),Rule Score,Good/Bad Trade,Loss Category,Comments,${rh},${dh}`;
-  const lcMap=Object.fromEntries(LOSSCATS.map(c=>[c.id,c.label]));
-  const rows=list.map(t=>{
-    const e=enrich(t);
-    const rc=RULES.map(r=>{const a=(t.ra||{})[r.id];return a===null||a===undefined?"":a==="yes"?"Yes":"No";}).join(",");
-    const dc=dq.map(d=>{const a=(t.dqa||{})[d.id];return a===true?"Violated":a===false?"Clean":"";}).join(",");
-    const cm=`"${(t.comments||"").replace(/"/g,'""')}"`;
-    return[t.date,t.entryTime||"",t.exitTime||"",t.ticker.toUpperCase(),e.direction,t.setup,t.contracts||"",
-      t.entry,t.stop,t.target,t.exit||"",
-      e.risk!==null?e.risk.toFixed(2):"",e.reward!==null?e.reward.toFixed(2):"",
-      e.rr!==null?e.rr.toFixed(2):"",e.realizedR!==null?e.realizedR.toFixed(2):"",
-      t.result,e.wl||"",e.durationMin!==null?Math.round(e.durationMin):"",
-      e.rs!==null?pc(e.rs):"",e.isGood===null?"":e.isGood?"Good Trade":"Bad Trade",
-      t.lossCat?lcMap[t.lossCat]||"":"",cm,
-      rc,dc].join(",");
-  });
-  const b=new Blob([[hdr,...rows].join("\n")],{type:"text/csv"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=exportFileName("csv");a.click();
-}
-
 function expSummaryHTML(includeStats){
   if(includeStats===undefined)includeStats=true;
   const list=getFilteredTrades();
@@ -2182,6 +2231,9 @@ function expSummaryHTML(includeStats){
   --a:#BD9142;--abg:rgba(189,145,66,0.14);--abd:rgba(189,145,66,0.34);
   --p:#8377C9;--pbg:rgba(131,119,201,0.14);--pbd:rgba(131,119,201,0.34);
   --refhead:#7C9EB8;
+  --tabdash:#A15B78;--tabdashbg:rgba(161,91,120,0.12);--tabdashbd:rgba(161,91,120,0.32);
+  --tablr:#4F7691;--tablrbg:rgba(79,118,145,0.12);--tablrbd:rgba(79,118,145,0.32);
+  --tabdashbg-dd:#ECDEE4;--tablrbg-dd:#DCE4E9;
   --rad:8px;--radl:12px;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--mono:var(--sans);
   --fxs:11px;--fsm:12px;--fbase:13px;--fmd:15px;
 }
@@ -2194,6 +2246,9 @@ function expSummaryHTML(includeStats){
   --a:#E4BD7D;--abg:rgba(228,189,125,0.15);--abd:rgba(228,189,125,0.35);
   --p:#B4ABE8;--pbg:rgba(180,171,232,0.15);--pbd:rgba(180,171,232,0.35);
   --refhead:#E0AFC2;
+  --tabdash:#A9C6DE;--tabdashbg:rgba(169,198,222,0.15);--tabdashbd:rgba(169,198,222,0.35);
+  --tablr:#E0AFC2;--tablrbg:rgba(224,175,194,0.15);--tablrbd:rgba(224,175,194,0.35);
+  --tabdashbg-dd:#373D44;--tablrbg-dd:#423942;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t);padding:2rem 1.25rem 4rem;font-size:13px}
 .themetoggle{width:32px;height:32px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -2278,6 +2333,34 @@ h1{font-size:22px;font-weight:600;margin-bottom:4px}
 .btn:hover{background:var(--surface)}
 .lbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;padding:0 3px;flex-wrap:wrap;gap:8px}
 .lcount{font-size:var(--fbase);color:var(--t2)}
+.lcountbottom{text-align:right;font-size:var(--fxs);font-weight:300;font-style:italic;color:var(--t3);margin-top:8px}
+.topicons{display:inline-flex;align-items:center;gap:9px}
+.iconsep{color:var(--bdm);user-select:none;font-size:13px;line-height:1}
+.topicon{height:16px;display:inline-flex;align-items:center;justify-content:center;gap:3px;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
+.topicon:hover{color:var(--t)}
+.topicon svg{width:16px;height:16px;display:block;flex-shrink:0}
+.logfilterbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:.75rem}
+.filterbtn{padding:5px 10px;font-size:var(--fsm);font-family:var(--sans);border:.5px solid transparent;border-radius:var(--rad);background:none;color:var(--t2);cursor:pointer;white-space:nowrap}
+.filterbtn:hover{color:var(--t)}
+.filterbtn.on{color:var(--tablr);background:var(--tablrbg);border-color:var(--tablrbd)}
+.filterdd-wrap{position:relative;display:inline-flex}
+.filterdd{position:absolute;top:30px;left:0;min-width:140px;width:max-content;max-width:280px;background:var(--tablrbg-dd);border:.5px solid var(--tablrbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;z-index:50;text-align:left;cursor:default}
+.filterdd-row{display:block;width:100%;text-align:left;padding:6px 12px;background:none;border:none;font-size:var(--fsm);color:var(--t);cursor:pointer;font-family:var(--sans);white-space:nowrap}
+.filterdd-row:hover{background:var(--tablrbd)}
+.filterdd-check{display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap}
+.filterdd-check input{cursor:pointer;accent-color:var(--tablr);flex-shrink:0}
+.filterdd-label{flex:1}
+.filterdd-count{margin-left:auto;flex-shrink:0;color:var(--t3)}
+.filterclear{height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
+.filterclear:hover{color:var(--t)}
+.filterclear svg{width:14px;height:14px;display:block}
+.logbaricons{display:inline-flex;align-items:center;gap:9px;margin-left:auto}
+.searchwrap{display:inline-flex;align-items:center;gap:6px}
+.searchpill{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:3px 7px;border:.5px solid var(--tabdashbd);background:var(--tabdashbg);color:var(--tabdash)}
+.searchpill svg{width:14px;height:14px;flex-shrink:0}
+.searchpill input{background:none;border:none;outline:none;font-family:var(--sans);font-size:var(--fbase);color:var(--t);width:130px}
+.searchpill input::placeholder{color:var(--t3)}
+.hlmark{background:var(--tabdashbg);color:var(--tabdash);border-radius:3px;padding:0 2px;font-weight:700}
 .twrap{overflow-x:auto;border:.5px solid var(--bd);border-radius:var(--radl)}
 table{width:100%;border-collapse:collapse;font-size:var(--fsm)}
 thead tr{background:var(--s2);border-bottom:.5px solid var(--bd)}
@@ -2299,7 +2382,7 @@ tr.exprow td{padding:0;border-bottom:.5px solid var(--bd)}
 .pneu{background:var(--s2);color:var(--t2);border:.5px solid var(--bd)}
 .pgood{background:var(--gbg);color:var(--g);border:.5px solid var(--gbd)}
 .pbad{background:var(--rbg);color:var(--r);border:.5px solid var(--rbd)}
-.spill{display:inline-flex;align-items:center;font-size:var(--fxs);font-weight:600;padding:3px 9px;border-radius:5px;white-space:nowrap;font-family:var(--mono);min-width:42px;justify-content:center}
+.spill{display:inline-flex;align-items:center;font-size:var(--fxs);font-weight:600;padding:3px 9px;border-radius:5px;white-space:nowrap;font-family:var(--mono);width:44px;justify-content:center}
 .rulesflex{display:flex;align-items:center;gap:5px}
 .exppanel{padding:16px 18px;background:var(--s2)}
 .expmeta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:var(--fsm);color:var(--t2);margin-bottom:12px;white-space:normal}
@@ -2384,8 +2467,19 @@ var EXP_LOSSCATS=${losscatsJSON};
 var EXP_LCMAP={};EXP_LOSSCATS.forEach(function(c){EXP_LCMAP[c.id]=c.label;});
 var EXP_LOG_COLS=13;
 var expLogSort={col:"date",dir:"desc"};
-var expLogFilters={ticker:"",setup:"",wl:"",process:"",lossCat:""};
-var expExpandedId=null;
+var expLogFilters={ticker:[],setup:[],wl:[],process:[],lossCat:[]};
+var expLogFilterOpen=null;
+var expExpandedIds=new Set();
+var expSearchOpen=false;
+var expSearchQuery="";
+var expSearchLocked=false;
+var expSearchNavIndex=-1;
+var EXP_ICON_SEARCH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+var EXP_ICON_X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+var EXP_ICON_TRIRIGHT='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M9 6l9 6-9 6V6z"/></svg>';
+var EXP_ICON_TRILEFT='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M15 6l-9 6 9 6V6z"/></svg>';
+var EXP_ICON_TRIDOWN='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6 9l6 9 6-9H6z"/></svg>';
+var EXP_ICON_FILTER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 4 20 4 14 12.5 14 19 10 21 10 12.5 4 4"/></svg>';
 function expF2(n){return n===null||n===undefined||isNaN(n)?"—":Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});}
 function expCuNoSign(n){if(n===null||n===undefined||isNaN(n))return"—";return"$"+expF2(Math.abs(n));}
 function expPc(n){return n===null||n===undefined||isNaN(n)?"—":(n*100).toFixed(1)+"%";}
@@ -2393,6 +2487,14 @@ function expSc(v){return v===null||v===undefined?"var(--t3)":v>=.8?"var(--g)":v>
 function expSbg(v){return v===null||v===undefined?"var(--s2)":v>=.8?"var(--gbg)":v>=.5?"var(--abg)":"var(--rbg)";}
 function expSbd(v){return v===null||v===undefined?"var(--bd)":v>=.8?"var(--gbd)":v>=.5?"var(--abd)":"var(--rbd)";}
 function expEsc(s){return(s||"").replace(/</g,"&lt;");}
+function expReEsc(s){return s.replace(/[.*+?^\${}()|[\]\\]/g,"\\$&");}
+function expHl(s,q){
+  var raw=expEsc(s||"");
+  var query=(q||"").trim();
+  if(!query)return raw;
+  var re=new RegExp(expReEsc(expEsc(query)),"ig");
+  return raw.replace(re,function(m){return'<mark class="hlmark">'+m+'</mark>';});
+}
 function expDispDate(s){if(!s)return"—";var p=s.split("-");if(p.length!==3)return s;return p[2]+"/"+p[1]+"/"+p[0].slice(2);}
 function expFdur(min){if(min===null||min===undefined||isNaN(min))return"—";var h=Math.floor(min/60),m=Math.round(min%60);return h>0?h+"h "+m+"m":m+"m";}
 function expFillsH(fills){
@@ -2410,17 +2512,28 @@ function expFillsH(fills){
 }
 function expUniqueTickers(){var s={};EXP_TRADES.forEach(function(t){s[(t.ticker||"").toUpperCase()]=1;});return Object.keys(s).sort();}
 function expUniqueSetups(){var s={};EXP_TRADES.forEach(function(t){if(t.setup)s[t.setup]=1;});return Object.keys(s).sort();}
+function expSearchMatch(t){
+  // Matches everything in a trade, not just the columns visible in the collapsed
+  // row — comments only show once a row is expanded, but search still needs to
+  // find them without opening every row first.
+  var q=expSearchQuery.trim().toLowerCase();
+  if(!q)return true;
+  var lc=t.lossCat?(EXP_LCMAP[t.lossCat]||""):"";
+  var hay=[t.ticker,t.setup,t.wl,t.direction,expDispDate(t.date),t.comments,lc].filter(Boolean).join(" ").toLowerCase();
+  return hay.indexOf(q)!==-1;
+}
 function expApplyLogFilters(list){
   return list.filter(function(t){
-    if(expLogFilters.ticker&&(t.ticker||"").toUpperCase()!==expLogFilters.ticker)return false;
-    if(expLogFilters.setup&&t.setup!==expLogFilters.setup)return false;
-    if(expLogFilters.wl&&t.wl!==expLogFilters.wl)return false;
-    if(expLogFilters.process){
+    if(expLogFilters.ticker.length&&expLogFilters.ticker.indexOf((t.ticker||"").toUpperCase())===-1)return false;
+    if(expLogFilters.setup.length&&expLogFilters.setup.indexOf(t.setup)===-1)return false;
+    if(expLogFilters.wl.length&&expLogFilters.wl.indexOf(t.wl)===-1)return false;
+    if(expLogFilters.process.length){
       if(t.isGood===null||t.isGood===undefined)return false;
-      if(expLogFilters.process==="good"&&!t.isGood)return false;
-      if(expLogFilters.process==="bad"&&t.isGood)return false;
+      var procVal=t.isGood?"good":"bad";
+      if(expLogFilters.process.indexOf(procVal)===-1)return false;
     }
-    if(expLogFilters.lossCat&&t.lossCat!==expLogFilters.lossCat)return false;
+    if(expLogFilters.lossCat.length&&expLogFilters.lossCat.indexOf(t.lossCat)===-1)return false;
+    if(!expSearchMatch(t))return false;
     return true;
   });
 }
@@ -2450,10 +2563,133 @@ function expSetLogSort(col){
   else{expLogSort.col=col;expLogSort.dir=col==="date"?"desc":"asc";}
   renderExpLog();
 }
-function expSetLogFilter(key,val){expLogFilters[key]=val;renderExpLog();}
-function expClearLogFilters(){expLogFilters={ticker:"",setup:"",wl:"",process:"",lossCat:""};renderExpLog();}
-function expHasLogFilters(){return Object.keys(expLogFilters).some(function(k){return expLogFilters[k];});}
-function expToggleExpand(id){expExpandedId=expExpandedId===id?null:id;renderExpLog();}
+function expHasLogFilters(){return Object.keys(expLogFilters).some(function(k){return expLogFilters[k].length>0;});}
+function expClearLogFilters(){expLogFilters={ticker:[],setup:[],wl:[],process:[],lossCat:[]};renderExpLog();}
+// Button-style multi-select filter dropdowns, matching the main journal.
+function expToggleLogFilterDropdown(key,ev){
+  if(ev)ev.stopPropagation();
+  expLogFilterOpen=expLogFilterOpen===key?null:key;
+  renderExpLog();
+}
+function expToggleLogFilterValue(key,val,ev){
+  if(ev)ev.stopPropagation();
+  var cur=expLogFilters[key];
+  var i=cur.indexOf(val);
+  if(i===-1)cur.push(val);else cur.splice(i,1);
+  renderExpLog();
+}
+function expClearOneLogFilter(key,ev){
+  if(ev)ev.stopPropagation();
+  expLogFilters[key]=[];
+  renderExpLog();
+}
+function expCloseLogFilterDropdown(){if(expLogFilterOpen){expLogFilterOpen=null;renderExpLog();}}
+function expCountForFilterOption(key,val,list){
+  return list.filter(function(t){
+    if(key!=="ticker"&&expLogFilters.ticker.length&&expLogFilters.ticker.indexOf((t.ticker||"").toUpperCase())===-1)return false;
+    if(key!=="setup"&&expLogFilters.setup.length&&expLogFilters.setup.indexOf(t.setup)===-1)return false;
+    if(key!=="wl"&&expLogFilters.wl.length&&expLogFilters.wl.indexOf(t.wl)===-1)return false;
+    if(key!=="process"&&expLogFilters.process.length){
+      if(t.isGood===null||t.isGood===undefined)return false;
+      var procVal=t.isGood?"good":"bad";
+      if(expLogFilters.process.indexOf(procVal)===-1)return false;
+    }
+    if(key!=="lossCat"&&expLogFilters.lossCat.length&&expLogFilters.lossCat.indexOf(t.lossCat)===-1)return false;
+    if(!expSearchMatch(t))return false;
+    switch(key){
+      case"ticker":return(t.ticker||"").toUpperCase()===val;
+      case"setup":return t.setup===val;
+      case"wl":return t.wl===val;
+      case"process":return t.isGood!==null&&t.isGood!==undefined&&(t.isGood?"good":"bad")===val;
+      case"lossCat":return t.lossCat===val;
+      default:return false;
+    }
+  }).length;
+}
+function expRenderFilterBtn(key,allLabel,opts,list){
+  var cur=expLogFilters[key];
+  var open=expLogFilterOpen===key;
+  var curLabel=allLabel;
+  if(cur.length===1){
+    var match=null;
+    for(var i=0;i<opts.length;i++){if(opts[i].val===cur[0]){match=opts[i];break;}}
+    curLabel=match?match.label:cur[0];
+  }else if(cur.length>1){
+    var match2=null;
+    for(var j=0;j<opts.length;j++){if(opts[j].val===cur[0]){match2=opts[j];break;}}
+    curLabel=(match2?match2.label:cur[0])+' +'+(cur.length-1);
+  }
+  var rowsHtml=opts.map(function(o){
+    return'<label class="filterdd-row filterdd-check"><input type="checkbox" '+(cur.indexOf(o.val)!==-1?"checked":"")+' onchange="expToggleLogFilterValue(\\''+key+'\\',\\''+o.val+'\\',event)"/><span class="filterdd-label">'+expEsc(o.label)+'</span><span class="filterdd-count">('+(list?expCountForFilterOption(key,o.val,list):0)+')</span></label>';
+  }).join("");
+  return'<div class="filterdd-wrap">'+
+    '<button class="filterbtn'+((cur.length>0||open)?" on":"")+'" onclick="expToggleLogFilterDropdown(\\''+key+'\\',event)" title="filter by '+allLabel.replace('all ','')+'">'+expEsc(curLabel)+'</button>'+
+    (open?('<div class="filterdd" onclick="event.stopPropagation()"><button class="filterdd-row" onclick="expClearOneLogFilter(\\''+key+'\\',event)">'+allLabel+'</button>'+rowsHtml+'</div>'):"")+
+  '</div>';
+}
+// Search icon/field toggle + live search-as-you-type, matching the main journal.
+function expToggleSearch(ev){
+  if(ev)ev.stopPropagation();
+  expSearchOpen=!expSearchOpen;
+  expSearchLocked=false;
+  expSearchNavIndex=-1;
+  if(!expSearchOpen)expSearchQuery="";
+  renderExpLog();
+  if(expSearchOpen){
+    requestAnimationFrame(function(){var el=document.getElementById("expsearch-input");if(el)el.focus();});
+  }
+}
+function expCloseSearch(){
+  if(!expSearchOpen)return;
+  expSearchOpen=false;expSearchQuery="";expSearchLocked=false;expSearchNavIndex=-1;
+  renderExpLog();
+}
+function expOnSearchInput(el){
+  expSearchQuery=el.value;
+  expSearchNavIndex=-1;
+  var pos=el.selectionStart;
+  renderExpLog();
+  requestAnimationFrame(function(){
+    var ni=document.getElementById("expsearch-input");
+    if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
+  });
+}
+function expOnSearchKeydown(ev){
+  if(ev.key==="Enter"){ev.preventDefault();expSearchLocked=true;}
+  else if(ev.key==="Escape"){ev.preventDefault();expCloseSearch();}
+}
+function expCurrentSearchMatches(){
+  if(!expSearchQuery.trim())return[];
+  return expApplyLogSort(expApplyLogFilters(EXP_TRADES));
+}
+function expSearchNav(dir,ev){
+  if(ev)ev.stopPropagation();
+  var list=expCurrentSearchMatches();
+  if(!list.length)return;
+  if(expSearchNavIndex<0)expSearchNavIndex=dir>0?0:list.length-1;
+  else expSearchNavIndex=(expSearchNavIndex+dir+list.length)%list.length;
+  var t=list[expSearchNavIndex];
+  if(!t)return;
+  expExpandedIds.add(t.id); // reveal fields (e.g. comments) that only show once expanded
+  renderExpLog();
+  requestAnimationFrame(function(){
+    var el=document.getElementById("exptraderow-"+t.id);
+    if(el)el.scrollIntoView({behavior:"smooth",block:"center"});
+  });
+}
+function expToggleExpand(id){
+  if(expExpandedIds.has(id))expExpandedIds.delete(id);else expExpandedIds.add(id);
+  renderExpLog();
+}
+// Master expand/collapse-all toggle — collapses everything if any currently
+// visible (filtered/sorted) row is open, otherwise expands all.
+function expToggleExpandAll(){
+  var list=expApplyLogSort(expApplyLogFilters(EXP_TRADES));
+  var anyOpen=list.some(function(t){return expExpandedIds.has(t.id);});
+  if(anyOpen)expExpandedIds.clear();
+  else list.forEach(function(t){expExpandedIds.add(t.id);});
+  renderExpLog();
+}
 function expExpandRowH(t){
   var ra=t.ra||{},dqa=t.dqa||{};
   var dirLabel=t.direction==="short"?"Short":"Long";
@@ -2486,7 +2722,7 @@ function expExpandRowH(t){
       (t.lossCat?'<span><strong>Loss type</strong> '+(EXP_LCMAP[t.lossCat]||"")+'</span>':"")+
     '</div>'+
     ((t.fills&&t.fills.length>1)?'<div class="expmeta" style="margin-top:-6px">'+expFillsH(t.fills)+'</div>':"")+
-    ((t.comments&&t.comments.trim())?'<div class="expsub">comments</div><div class="expcomment">'+expEsc(t.comments)+'</div>':"")+
+    ((t.comments&&t.comments.trim())?'<div class="expsub">comments</div><div class="expcomment">'+expHl(t.comments,expSearchQuery)+'</div>':"")+
     '<div class="expcols" style="margin-top:18px">'+
       '<div><div class="expsub">rules checklist</div>'+rulesHtml+'<div class="expsub" style="margin-top:16px">disqualifiers</div>'+dqHtml+'</div>'+
       '<div>'+shots+'</div>'+
@@ -2498,6 +2734,7 @@ function renderExpLog(){
   if(!root)return;
   var list=expApplyLogSort(expApplyLogFilters(EXP_TRADES));
   var filtersOn=expHasLogFilters();
+  var anyExpanded=list.some(function(t){return expExpandedIds.has(t.id);});
   var LOG_HEADERS=[
     {key:null,label:""},{key:"date",label:"date"},{key:"ticker",label:"ticker"},{key:"setup",label:"setup"},
     {key:null,label:"contracts"},{key:null,label:"entry"},{key:null,label:"stop"},{key:null,label:"target"},{key:null,label:"exit"},
@@ -2509,18 +2746,36 @@ function renderExpLog(){
     var arrow=active?'<span class="sortarrow">'+(expLogSort.dir==="asc"?"▲":"▼")+'</span>':"";
     return'<th class="sortable'+(active?" sorted":"")+'" onclick="expSetLogSort(\\''+h.key+'\\')" title="sort by '+h.label+'">'+h.label+arrow+"</th>";
   }).join("");
-  var tickerOpts=expUniqueTickers().map(function(tk){return'<option value="'+tk+'"'+(expLogFilters.ticker===tk?" selected":"")+'>'+tk+"</option>";}).join("");
-  var setupOpts=expUniqueSetups().map(function(su){return'<option value="'+su+'"'+(expLogFilters.setup===su?" selected":"")+'>'+su+"</option>";}).join("");
-  var lossOpts=EXP_LOSSCATS.map(function(c){return'<option value="'+c.id+'"'+(expLogFilters.lossCat===c.id?" selected":"")+'>'+c.label+"</option>";}).join("");
-  var filterBar=EXP_TRADES.length>0?('<div class="logfilterbar">'+
-    '<select onchange="expSetLogFilter(\\'ticker\\',this.value)" title="filter by ticker"><option value=""'+(expLogFilters.ticker===""?" selected":"")+'>All tickers</option>'+tickerOpts+'</select>'+
-    '<select onchange="expSetLogFilter(\\'setup\\',this.value)" title="filter by setup"><option value=""'+(expLogFilters.setup===""?" selected":"")+'>All setups</option>'+setupOpts+'</select>'+
-    '<select onchange="expSetLogFilter(\\'wl\\',this.value)" title="filter by win/loss"><option value=""'+(expLogFilters.wl===""?" selected":"")+'>All W/L</option><option value="Win"'+(expLogFilters.wl==="Win"?" selected":"")+'>Win</option><option value="Loss"'+(expLogFilters.wl==="Loss"?" selected":"")+'>Loss</option><option value="BE"'+(expLogFilters.wl==="BE"?" selected":"")+'>Breakeven</option></select>'+
-    '<select onchange="expSetLogFilter(\\'process\\',this.value)" title="filter by process grade"><option value=""'+(expLogFilters.process===""?" selected":"")+'>All process</option><option value="good"'+(expLogFilters.process==="good"?" selected":"")+'>Good</option><option value="bad"'+(expLogFilters.process==="bad"?" selected":"")+'>Bad</option></select>'+
-    '<select onchange="expSetLogFilter(\\'lossCat\\',this.value)" title="filter by loss category"><option value=""'+(expLogFilters.lossCat===""?" selected":"")+'>All loss types</option>'+lossOpts+'</select>'+
-    (filtersOn?'<button class="btn" onclick="expClearLogFilters()">clear filters</button>':"")+
-  '</div>'):"";
-  var countBar='<div class="lbar"><span class="lcount">'+list.length+' trade'+(list.length!==1?"s":"")+' shown'+(filtersOn?' (of '+EXP_TRADES.length+' total)':"")+'</span></div>';
+  var tickerOpts=expUniqueTickers().map(function(tk){return{val:tk,label:tk};});
+  var setupOpts=expUniqueSetups().map(function(su){return{val:su,label:su};});
+  var lossOpts=EXP_LOSSCATS.map(function(c){return{val:c.id,label:c.label};});
+  var filterBar=EXP_TRADES.length>0?(
+    '<div class="logfilterbar">'+
+    '<button class="topicon" onclick="expToggleExpandAll()" title="'+(anyExpanded?"collapse all":"expand all")+'">'+(anyExpanded?EXP_ICON_TRIDOWN:EXP_ICON_TRIRIGHT)+'</button>'+
+    '<span class="topicon" style="cursor:default;margin-right:-4px" title="filters">'+EXP_ICON_FILTER+'</span>'+
+    expRenderFilterBtn("ticker","all tickers",tickerOpts,EXP_TRADES)+
+    '<span class="iconsep">|</span>'+
+    expRenderFilterBtn("setup","all setups",setupOpts,EXP_TRADES)+
+    '<span class="iconsep">|</span>'+
+    expRenderFilterBtn("wl","all W/L",[{val:"Win",label:"Win"},{val:"Loss",label:"Loss"},{val:"BE",label:"Breakeven"}],EXP_TRADES)+
+    '<span class="iconsep">|</span>'+
+    expRenderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}],EXP_TRADES)+
+    '<span class="iconsep">|</span>'+
+    expRenderFilterBtn("lossCat","all loss types",lossOpts,EXP_TRADES)+
+    (filtersOn?'<button class="filterclear" onclick="expClearLogFilters()" title="clear all filters">'+EXP_ICON_X+'</button>':"")+
+    '<div class="logbaricons">'+
+      '<span class="searchwrap">'+
+        ((expSearchOpen&&expCurrentSearchMatches().length>0)?(
+          '<button class="topicon" onclick="expSearchNav(-1,event)" title="previous match">'+EXP_ICON_TRILEFT+'</button>'+
+          '<button class="topicon" onclick="expSearchNav(1,event)" title="next match">'+EXP_ICON_TRIRIGHT+'</button>'
+        ):"")+
+        (expSearchOpen?
+          '<span class="searchpill" onclick="event.stopPropagation()">'+EXP_ICON_SEARCH+'<input id="expsearch-input" placeholder="" value="'+expEsc(expSearchQuery)+'" oninput="expOnSearchInput(this)" onkeydown="expOnSearchKeydown(event)"/></span>'
+          :'<button class="topicon" onclick="expToggleSearch(event)" title="search trades">'+EXP_ICON_SEARCH+'</button>')+
+      '</span>'+
+    '</div>'+
+    '</div>'
+  ):"";
   var bodyHtml;
   if(EXP_TRADES.length===0){
     bodyHtml='<div class="empty2">no trades in this period</div>';
@@ -2532,11 +2787,12 @@ function renderExpLog(){
       var rc=t.wl==="Win"?"var(--g)":t.wl==="Loss"?"var(--r)":"var(--t)";
       var col=expSc(t.rs),bg=expSbg(t.rs),bd=expSbd(t.rs);
       var sl=(t.rs!==null&&t.rs!==undefined)?(t.fc+"/"+t.ac):"—";
-      var row='<tr class="trow" onclick="expToggleExpand('+t.id+')">'+
-        '<td class="chev">'+(expExpandedId===t.id?"▾":"▸")+'</td>'+
-        '<td style="font-size:var(--fsm);color:var(--t2)">'+expDispDate(t.date)+'</td>'+
-        '<td style="font-weight:700">'+(t.ticker?t.ticker.toUpperCase():"")+'</td>'+
-        '<td><span class="pill pneu">'+t.setup+'</span></td>'+
+      var isOpen=expExpandedIds.has(t.id);
+      var row='<tr class="trow" id="exptraderow-'+t.id+'" onclick="expToggleExpand('+t.id+')">'+
+        '<td class="chev">'+(isOpen?"▾":"▸")+'</td>'+
+        '<td style="font-size:var(--fsm);color:var(--t2)">'+expHl(expDispDate(t.date),expSearchQuery)+'</td>'+
+        '<td style="font-weight:700">'+expHl(t.ticker?t.ticker.toUpperCase():"",expSearchQuery)+'</td>'+
+        '<td><span class="pill pneu">'+expHl(t.setup,expSearchQuery)+'</span></td>'+
         '<td style="text-align:center">'+(t.contracts||"—")+'</td>'+
         '<td>$'+expF2(t.entry)+'</td>'+
         '<td style="color:var(--r)">$'+expF2(t.stop)+'</td>'+
@@ -2544,16 +2800,19 @@ function renderExpLog(){
         '<td>'+(t.exit?"$"+expF2(t.exit):"—")+'</td>'+
         '<td style="font-weight:700;color:'+rc+'">'+(!isNaN(res)?expCuNoSign(res):"—")+'</td>'+
         '<td>'+(t.wl?'<span class="pill p'+t.wl.toLowerCase()+'">'+t.wl+'</span>':"—")+'</td>'+
-        '<td><div class="rulesflex"><span class="spill" style="background:'+bg+';color:'+col+';border:.5px solid '+bd+'" title="rules followed">'+sl+'</span>'+((t.comments&&t.comments.trim())?'<span title="has comment">📝</span>':"")+((t.screenshots&&t.screenshots.length>0)?'<span title="has screenshots">📷'+t.screenshots.length+'</span>':"")+'</div></td>'+
+        '<td><div class="rulesflex"><span class="spill" style="background:'+bg+';color:'+col+';border:.5px solid '+bd+'" title="rules followed">'+sl+'</span>'+((t.comments&&t.comments.trim())?'<span title="has comment">📝</span>':"")+((t.screenshots&&t.screenshots.length>0)?'<span title="has screenshots">📷</span>':"")+'</div></td>'+
         '<td>'+((t.isGood!==null&&t.isGood!==undefined)?'<span class="pill '+(t.isGood?"pgood":"pbad")+'">'+(t.isGood?"Good":"Bad")+'</span>':"—")+'</td>'+
       '</tr>';
-      return row+(expExpandedId===t.id?expExpandRowH(t):"");
+      return row+(isOpen?expExpandRowH(t):"");
     }).join("");
     bodyHtml='<div class="twrap"><table><thead><tr>'+theadHtml+'</tr></thead><tbody>'+rows+'</tbody></table></div>';
   }
-  root.innerHTML=countBar+filterBar+bodyHtml;
+  var countBar=EXP_TRADES.length>0?('<div class="lcountbottom">'+list.length+' of '+EXP_TRADES.length+' trades shown</div>'):"";
+  root.innerHTML=filterBar+bodyHtml+countBar;
 }
 renderExpLog();
+document.addEventListener("click",function(){if(expLogFilterOpen)expCloseLogFilterDropdown();if(expSearchOpen&&!expSearchLocked)expCloseSearch();});
+document.addEventListener("keydown",function(ev){if(ev.key==="Escape"){if(expSearchOpen)expCloseSearch();if(expLogFilterOpen)expCloseLogFilterDropdown();}});
 var statsDetailsEl=document.getElementById("stats-details");
 if(statsDetailsEl){statsDetailsEl.addEventListener("toggle",function(){if(statsDetailsEl.open)layoutExpChart();});}
 function fmtDate(s){if(!s)return"Start";var p=s.split("-");return p[2]+"/"+p[1]+"/"+p[0].slice(2);}
@@ -2905,13 +3164,13 @@ function render(){
     <div class="topicons">
       <span id="drive-status">${driveStatusHtml()}</span>
       <span class="iconsep">|</span>
-      <button class="topicon" onclick="impData()" title="import backup (.json)" data-tt="import backup (.json)">${ICON_UP}</button>
+      <button class="topicon" onclick="impData()" aria-label="import backup (.json)" data-tt="import backup (.json)">${ICON_UP}</button>
       <span class="iconsep">|</span>
-      <button class="topicon" onclick="expData()" title="export backup (.json)" data-tt=".json export">${ICON_DOWN}</button>
+      <button class="topicon" onclick="expData()" aria-label="export backup (.json)" data-tt=".json export">${ICON_DOWN}</button>
       <span class="iconsep">|</span>
-      <button class="topicon" onclick="openExportOptions()" title="share summary (.html)" data-tt=".html summary export">${ICON_DOWN}${ICON_DOC}</button>
+      <button class="topicon" onclick="openExportOptions()" aria-label="share summary (.html)" data-tt=".html summary export">${ICON_DOWN}${ICON_DOC}</button>
       <span class="iconsep">|</span>
-      <button class="themetoggle" onclick="toggleTheme()" title="${isDark?"switch to light mode":"switch to dark mode"}" data-tt="${isDark?"switch to light mode":"switch to dark mode"}">${isDark?ICON_SUN:ICON_MOON}</button>
+      <button class="themetoggle" onclick="toggleTheme()" aria-label="${isDark?"switch to light mode":"switch to dark mode"}" data-tt="${isDark?"switch to light mode":"switch to dark mode"}">${isDark?ICON_SUN:ICON_MOON}</button>
     </div>
   </div>
 </div>
@@ -3038,21 +3297,21 @@ function closeLogFilterDropdown(){if(logFilterOpen){logFilterOpen=null;render();
 // picking ticker=MCL makes every other dropdown's counts reflect MCL-only trades).
 function countForFilterOption(key,val,list){
   return list.filter(t=>{
-    if(key!=="ticker"&&logFilters.ticker.length&&!logFilters.ticker.includes(t.ticker.toUpperCase()))return false;
+    if(key!=="ticker"&&logFilters.ticker.length&&!logFilters.ticker.includes((t.ticker||"").toUpperCase()))return false;
     if(key!=="setup"&&logFilters.setup.length&&!logFilters.setup.includes(t.setup))return false;
     if(key!=="wl"&&logFilters.wl.length&&!logFilters.wl.includes(t.wl))return false;
     if(key!=="process"&&logFilters.process.length){
-      if(t.isGood===null)return false;
+      if(t.isGood===null||t.isGood===undefined)return false;
       const procVal=t.isGood?"good":"bad";
       if(!logFilters.process.includes(procVal))return false;
     }
     if(key!=="lossCat"&&logFilters.lossCat.length&&!logFilters.lossCat.includes(t.lossCat))return false;
     if(!logSearchMatch(t))return false;
     switch(key){
-      case"ticker":return t.ticker.toUpperCase()===val;
+      case"ticker":return(t.ticker||"").toUpperCase()===val;
       case"setup":return t.setup===val;
       case"wl":return t.wl===val;
-      case"process":return t.isGood!==null&&(t.isGood?"good":"bad")===val;
+      case"process":return t.isGood!==null&&t.isGood!==undefined&&(t.isGood?"good":"bad")===val;
       case"lossCat":return t.lossCat===val;
       default:return false;
     }
@@ -3070,7 +3329,7 @@ function renderFilterBtn(key,allLabel,opts,list){
     curLabel=`${match?match.label:cur[0]} +${cur.length-1}`;
   }
   return`<div class="filterdd-wrap">
-    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" title="filter by ${allLabel.replace('all ',"")}" data-tt="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
+    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" aria-label="filter by ${allLabel.replace('all ',"")}" data-tt="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
     ${open?`<div class="filterdd" onclick="event.stopPropagation()">
       <button class="filterdd-row" onclick="clearOneLogFilter('${key}',event)">${allLabel}</button>
       ${opts.map(o=>`<label class="filterdd-row filterdd-check"><input type="checkbox" ${cur.includes(o.val)?"checked":""} onchange="toggleLogFilterValue('${key}','${o.val}',event)"/><span class="filterdd-label">${esc(o.label)}</span><span class="filterdd-count">(${list?countForFilterOption(key,o.val,list):0})</span></label>`).join("")}
@@ -3179,11 +3438,11 @@ function logSearchMatch(t){
 }
 function applyLogFilters(list){
   return list.filter(t=>{
-    if(logFilters.ticker.length&&!logFilters.ticker.includes(t.ticker.toUpperCase()))return false;
+    if(logFilters.ticker.length&&!logFilters.ticker.includes((t.ticker||"").toUpperCase()))return false;
     if(logFilters.setup.length&&!logFilters.setup.includes(t.setup))return false;
     if(logFilters.wl.length&&!logFilters.wl.includes(t.wl))return false;
     if(logFilters.process.length){
-      if(t.isGood===null)return false;
+      if(t.isGood===null||t.isGood===undefined)return false;
       const procVal=t.isGood?"good":"bad";
       if(!logFilters.process.includes(procVal))return false;
     }
@@ -3201,8 +3460,8 @@ function applyLogSort(list){
       case"setup":return t.setup||"";
       case"result":{const r=parseFloat(t.result);return isNaN(r)?-Infinity:r;}
       case"wl":return t.wl||"";
-      case"rules":return t.rs===null?-1:t.rs;
-      case"process":return t.isGood===null?-1:(t.isGood?1:0);
+      case"rules":return(t.rs===null||t.rs===undefined)?-1:t.rs;
+      case"process":return(t.isGood===null||t.isGood===undefined)?-1:(t.isGood?1:0);
       default:return t.date||"";
     }
   };
@@ -3244,8 +3503,8 @@ function logH(en){
   return`<div>
 <div class="logfilterbar">
   ${trades.length>0?`
-  <button class="topicon" onclick="toggleExpandAll()" title="${anyExpanded?"collapse all":"expand all"}" data-tt="${anyExpanded?"collapse all":"expand all"}">${anyExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
-  <span class="topicon" style="cursor:default;margin-right:-4px" title="filters" data-tt="filters">${ICON_FILTER}</span>
+  <button class="topicon" onclick="toggleExpandAll()" aria-label="${anyExpanded?"collapse all":"expand all"}" data-tt="${anyExpanded?"collapse all":"expand all"}">${anyExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
+  <span class="topicon" style="cursor:default;margin-right:-4px" aria-label="filters" data-tt="filters">${ICON_FILTER}</span>
   ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})),en)}
   <span class="iconsep">|</span>
   ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})),en)}
@@ -3255,19 +3514,19 @@ function logH(en){
   ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}],en)}
   <span class="iconsep">|</span>
   ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})),en)}
-  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" title="clear all filters" data-tt="clear all filters">${ICON_X}</button>`:""}
+  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" aria-label="clear all filters" data-tt="clear all filters">${ICON_X}</button>`:""}
   `:""}
   <div class="logbaricons">
     <span class="searchwrap">
       ${logSearchOpen&&currentLogSearchMatches().length>0?`
-      <button class="topicon" onclick="logSearchNav(-1,event)" title="previous match" data-tt="previous match">${ICON_TRILEFT}</button>
-      <button class="topicon" onclick="logSearchNav(1,event)" title="next match" data-tt="next match">${ICON_TRIRIGHT}</button>
+      <button class="topicon" onclick="logSearchNav(-1,event)" aria-label="previous match" data-tt="previous match">${ICON_TRILEFT}</button>
+      <button class="topicon" onclick="logSearchNav(1,event)" aria-label="next match" data-tt="next match">${ICON_TRIRIGHT}</button>
       `:""}
       ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="" value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)" onkeydown="onLogSearchKeydown(event)"/></span>`
-      :`<button class="topicon" onclick="toggleLogSearch(event)" title="search trades" data-tt="search trades">${ICON_SEARCH}</button>`}
+      :`<button class="topicon" onclick="toggleLogSearch(event)" aria-label="search trades" data-tt="search trades">${ICON_SEARCH}</button>`}
     </span>
     <span class="iconsep">|</span>
-    <button class="topicon" onclick="tog()" title="${showForm?"cancel":"add trade"}" data-tt="${showForm?"cancel":"add trade"}">${showForm?ICON_X:ICON_PLUS}</button>
+    <button class="topicon" onclick="tog()" aria-label="${showForm?"cancel":"add trade"}" data-tt="${showForm?"cancel":"add trade"}">${showForm?ICON_X:ICON_PLUS}</button>
   </div>
 </div>
 
@@ -3359,7 +3618,7 @@ ${logList.map(t=>{
 <td>${t.exit?`$${f2(t.exit)}`:"—"}</td>
 <td style="font-weight:700;color:${rc}">${!isNaN(res)?cuNoSign(res):"—"}</td>
 <td>${t.wl?`<span class="pill p${t.wl.toLowerCase()}">${t.wl}</span>`:"—"}</td>
-<td><div class="rulesflex"><span class="spill" style="background:${bg};color:${col};border:.5px solid ${bd}" title="rules followed">${sl}</span>${t.comments&&t.comments.trim()?`<span title="has comment">📝</span>`:""}${t.screenshots&&t.screenshots.length>0?`<span title="has screenshots">📷${t.screenshots.length}</span>`:""}</div></td>
+<td><div class="rulesflex"><span class="spill" style="background:${bg};color:${col};border:.5px solid ${bd}" title="rules followed">${sl}</span>${t.comments&&t.comments.trim()?`<span title="has comment">📝</span>`:""}${t.screenshots&&t.screenshots.length>0?`<span title="has screenshots">📷</span>`:""}</div></td>
 <td>${t.isGood!==null?`<span class="pill ${t.isGood?"pgood":"pbad"}">${t.isGood?"Good":"Bad"}</span>`:"—"}</td>
 <td><button class="delbtn" onclick="event.stopPropagation();editTrade(${t.id})" title="edit trade">✎</button></td>
 <td><button class="delbtn" onclick="event.stopPropagation();del(${t.id})" title="delete trade">×</button></td>
@@ -3380,7 +3639,7 @@ function statCard(label,value,color,opts){
   const valCls=opts.hero?"sval sval-hero":"sval";
   const bar=opts.bar!==undefined?`<div class="svalbar"><div class="svalbarfill" style="width:${opts.bar}%;background:${color||"var(--t3)"}"></div></div>`:"";
   const sub=opts.sub?`<div class="svalsub" style="color:${opts.subColor||"var(--t2)"}">${opts.sub}</div>`:"";
-  return`<div class="scard"><div class="slabel">${label.toUpperCase()}</div><div class="pbody">${bar}<div class="${valCls}" style="color:${color||"var(--t)"}">${value}</div>${sub}</div></div>`;
+  return`<div class="scard${opts.cardClass?" "+opts.cardClass:""}"><div class="slabel">${label.toUpperCase()}</div><div class="pbody">${bar}<div class="${valCls}" style="color:${color||"var(--t)"}">${value}</div>${sub}</div></div>`;
 }
 function statGridH(s,title,ec,bc,em){
   const netColor=s.net>=0?"var(--g)":"var(--r)";
@@ -3401,7 +3660,7 @@ function statGridH(s,title,ec,bc,em){
   const row3=[
     statCard("Avg Win / Loss",`<span style="color:var(--g)">${s.aw!==null?cu(s.aw):"—"}</span> ${SEP} <span style="color:var(--r)">${s.al!==null?cu(-s.al):"—"}</span>`,null),
     statCard("Avg RR Plan / Realized",`${s.ar!==null?`${f2(s.ar)}:1`:"—"} ${SEP} ${s.arReal!==null?`${f2(s.arReal)}:1`:"—"}`,null),
-    statCard("Rule Execution",s.ep!==null?pc(s.ep):"—",bc,{sub:em,subColor:bc}),
+    statCard("Rule Execution",s.ep!==null?pc(s.ep):"—",bc,{sub:em,subColor:bc,cardClass:"tightsub"}),
   ];
   return`<div class="statrow3">${row1.join("")}</div>
 <div class="statrow3">${row2.join("")}</div>
@@ -3480,10 +3739,7 @@ ${s.dqStats.filter(d=>d.total>0).map(d=>`<div class="rsrow"><span class="rsname"
 </div>
 
 ${en.length>0?`
-<p class="seclab" style="display:flex;justify-content:space-between;align-items:center">
-  <span>setup breakdown</span>
-  <span class="seclab" style="margin:0">streak</span>
-</p>
+<p class="seclab">setup breakdown</p>
 <div class="setuprow">
 ${SETUPS.map(setup=>{
   const ts=en.filter(t=>t.setup===setup),ws=ts.filter(t=>t.wl==="Win"),ls=ts.filter(t=>t.wl==="Loss"),wr=(ws.length+ls.length)>0?ws.length/(ws.length+ls.length):null;
@@ -3492,6 +3748,7 @@ ${SETUPS.map(setup=>{
 }).join("")}
 <div class="setupcard"><div class="slabel">Avg Hold Time</div><div class="pbody"><div class="sval">${s.adur!==null?fdur(s.adur):"—"}</div></div></div>
 <div class="setupcard streakcard">
+  <div class="seclab" style="position:absolute;top:-24px;left:0;margin:0;white-space:nowrap">streak</div>
   <div class="rsrow" style="padding:4px 0"><span class="rsname">Current</span><span class="rspct" style="color:${curCol}">${curLbl}</span></div>
   <div class="rsrow" style="padding:4px 0"><span class="rsname">Max Win</span><span class="rspct" style="color:var(--g)">${st.maxWin||"—"}</span></div>
   <div class="rsrow" style="padding:4px 0;border-bottom:none"><span class="rsname">Max Loss</span><span class="rspct" style="color:var(--r)">${st.maxLoss||"—"}</span></div>
@@ -3529,10 +3786,10 @@ function reflectionH(){
   <div class="logbaricons">
     <span class="searchwrap">
       ${refSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="refsearch-input" placeholder="" value="${escAttr(refSearchQuery)}" oninput="onRefSearchInput(this)" onkeydown="onRefSearchKeydown(event)"/></span>`
-      :`<button class="topicon" onclick="toggleRefSearch(event)" title="search reflections" data-tt="search reflections">${ICON_SEARCH}</button>`}
+      :`<button class="topicon" onclick="toggleRefSearch(event)" aria-label="search reflections" data-tt="search reflections">${ICON_SEARCH}</button>`}
     </span>
     <span class="iconsep">|</span>
-    <button class="topicon" onclick="toggleRefForm()" title="${showRefForm?"cancel":"add reflection"}" data-tt="${showRefForm?"cancel":"add reflection"}">${showRefForm?ICON_X:ICON_PLUS}</button>
+    <button class="topicon" onclick="toggleRefForm()" aria-label="${showRefForm?"cancel":"add reflection"}" data-tt="${showRefForm?"cancel":"add reflection"}">${showRefForm?ICON_X:ICON_PLUS}</button>
   </div>
 </div>
 
