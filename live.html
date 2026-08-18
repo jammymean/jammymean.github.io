@@ -417,6 +417,15 @@ const DRIVE_CLIENT_ID="54130439532-5ttumb97jg0cndsbk1krh7a1ume44nqe.apps.googleu
 const DRIVE_SCOPES="https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
 const DRIVE_APPDATA_NAME="journal-data.json";   // private file, lives in the invisible appDataFolder
 const DRIVE_MIRROR_NAME="journal-mirror.json";  // public "anyone with the link" copy for the mentor viewer
+// Bug-2 fix: the mirror lives inside a dedicated public folder so viewer.html can
+// resolve it by listing the folder instead of trusting a hardcoded file ID that
+// goes stale if this file is ever recreated. The folder can't be one the user
+// makes by hand in Drive's UI — DRIVE_SCOPES below only grants drive.file access
+// (files/folders this app itself creates or the user opens via a picker), so an
+// externally-created folder is invisible to it. The app creates+owns this folder
+// itself instead, the same way it already creates the mirror file itself.
+const DRIVE_MIRROR_FOLDER_NAME="journal-mirror-folder";
+let driveMirrorFolderId=null; // resolved/created fresh each connect via driveFindOrCreateMirrorFolder()
 let driveTokenClient=null;
 let driveAccessToken=null;
 let driveConnected=false;
@@ -1051,7 +1060,7 @@ async function driveApiFetch(url,options){
 }
 async function driveFindFile(name,isAppData){
   const q=`name='${name.replace(/'/g,"\\'")}' and trashed=false`;
-  const params=new URLSearchParams({q,fields:"files(id,name,modifiedTime)",spaces:isAppData?"appDataFolder":"drive"});
+  const params=new URLSearchParams({q,fields:"files(id,name,modifiedTime,parents)",spaces:isAppData?"appDataFolder":"drive"});
   const res=await driveApiFetch("https://www.googleapis.com/drive/v3/files?"+params.toString());
   const d=await res.json();
   return(d.files&&d.files.length)?d.files[0]:null;
@@ -1065,8 +1074,8 @@ async function driveDownloadFile(fileId){
   const res=await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
   return res.text();
 }
-async function driveCreateFile(name,content,isAppData){
-  const metadata=isAppData?{name,parents:["appDataFolder"]}:{name};
+async function driveCreateFile(name,content,isAppData,parentFolderId){
+  const metadata=isAppData?{name,parents:["appDataFolder"]}:(parentFolderId?{name,parents:[parentFolderId]}:{name});
   const boundary="-------driveJournalBoundary"+Date.now();
   const body=
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`+
@@ -1078,6 +1087,37 @@ async function driveCreateFile(name,content,isAppData){
     body
   });
   return res.json();
+}
+async function driveFindFolder(name){
+  const q=`name='${name.replace(/'/g,"\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  const params=new URLSearchParams({q,fields:"files(id,name)"});
+  const res=await driveApiFetch("https://www.googleapis.com/drive/v3/files?"+params.toString());
+  const d=await res.json();
+  return(d.files&&d.files.length)?d.files[0]:null;
+}
+async function driveCreateFolder(name){
+  const res=await driveApiFetch("https://www.googleapis.com/drive/v3/files?fields=id",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name,mimeType:"application/vnd.google-apps.folder"})
+  });
+  return res.json();
+}
+// Resolves the app-owned public mirror folder, creating + sharing it the first
+// time. Safe to call on every connect — driveFindFolder only ever matches a
+// folder this same app previously created, so it's a no-op after the first run.
+async function driveFindOrCreateMirrorFolder(){
+  const found=await driveFindFolder(DRIVE_MIRROR_FOLDER_NAME);
+  if(found)return found.id;
+  const folder=await driveCreateFolder(DRIVE_MIRROR_FOLDER_NAME);
+  await driveSetPublicReadable(folder.id); // "anyone with the link — viewer", so the API-key-only viewer.html can list it
+  return folder.id;
+}
+// Moves an existing file so the given folder is its only parent. Used to pull
+// a mirror file created before this fix (sitting parentless in root) into the
+// new public folder, so viewer.html's folder-listing lookup finds it.
+async function driveMoveFileToFolder(fileId,folderId){
+  await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?addParents=${folderId}&removeParents=root`,{method:"PATCH"});
 }
 async function driveUpdateFile(fileId,content){
   const res=await driveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&fields=modifiedTime`,{
@@ -1116,18 +1156,25 @@ async function driveConnectFlow(){
       driveAppDataFileId=created.id;
       driveKnownModifiedTime=created.modifiedTime;
     }
+    driveMirrorFolderId=await driveFindOrCreateMirrorFolder();
     const foundMirror=await driveFindFile(DRIVE_MIRROR_NAME,false);
     if(foundMirror){
       driveMirrorFileId=foundMirror.id;
       await driveUpdateFile(driveMirrorFileId,driveSyncPayload());
+      // migrate a pre-fix mirror (created with no parent, sitting in root) into the public folder
+      if(!foundMirror.parents||!foundMirror.parents.includes(driveMirrorFolderId)){
+        try{await driveMoveFileToFolder(driveMirrorFileId,driveMirrorFolderId);}
+        catch(e){console.log("[drive] couldn't migrate existing mirror into public folder:",e.message||e);}
+      }
     }else{
-      const createdMirror=await driveCreateFile(DRIVE_MIRROR_NAME,driveSyncPayload(),false);
+      const createdMirror=await driveCreateFile(DRIVE_MIRROR_NAME,driveSyncPayload(),false,driveMirrorFolderId);
       driveMirrorFileId=createdMirror.id;
       await driveSetPublicReadable(driveMirrorFileId);
     }
     driveConnected=true;driveConnecting=false;
     console.log("[drive] appData file id:",driveAppDataFileId);
     console.log("[drive] mirror file id:",driveMirrorFileId);
+    console.log("[drive] mirror folder id (put this in viewer.html's DRIVE_MIRROR_FOLDER_ID):",driveMirrorFolderId);
     scheduleDriveTokenRefresh(driveTokenExpiresAt); // item 9 — single choke point for every successful connect path
     driveFetchUserEmail();                          // item 6 — fire and forget; dropdown shows "…" until this resolves
     driveRegisterRetrySuccess(); // this connect just proved the token/account works — clear any tripped breaker and backoff
