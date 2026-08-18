@@ -367,6 +367,23 @@ textarea:focus{border-color:var(--t3)}
 .searchpill input{background:none;border:none;outline:none;font-family:var(--sans);font-size:var(--fbase);color:var(--t);width:130px}
 .searchpill input::placeholder{color:var(--t3)}
 .hlmark{background:var(--tabdashbg);color:var(--tabdash);border-radius:3px;padding:0 2px;font-weight:700}
+/* Search nav "current match" — every match gets the plain .hlmark bold highlight
+   above; the ONE match the prev/next arrows are currently parked on additionally
+   gets this row/card-level treatment so a click visibly "jumps" somewhere new,
+   not just a barely-there scroll. Same mauve/blue family as .hlmark and the
+   connected-Drive icon, just stronger, and left-edge so it reads at a glance
+   even before the eye finds the highlighted text inside.
+ */
+tbody tr.trow.trow-current{background:var(--tabdashbg);box-shadow:inset 3px 0 0 var(--tabdash)}
+tbody tr.trow.trow-current:hover{background:var(--tabdashbg)}
+.fcard.fcard-current{border-color:var(--tabdashbd);box-shadow:inset 3px 0 0 var(--tabdash),0 0 0 1px var(--tabdashbd)}
+/* Keeps the search pill + prev/next arrows reachable no matter how far a long
+   trade log or reflection list has been scrolled — pinned to the viewport top
+   only while a search is actually open, so normal (non-searching) scrolling is
+   unaffected. Background matches the page so scrolled content underneath is
+   fully hidden rather than showing through; the bottom border/shadow separates
+   it from the content now scrolling past beneath it. */
+.logfilterbar.sticky-search,.lbar.sticky-search{position:sticky;top:0;z-index:30;background:var(--bg);padding:8px 0;border-bottom:.5px solid var(--bd);box-shadow:0 6px 12px -8px rgba(0,0,0,.25)}
 /* Sortable table headers */
 thead th.sortable{cursor:pointer;user-select:none;transition:color .15s}
 thead th.sortable:hover{color:var(--t)}
@@ -662,10 +679,14 @@ let logSearchOpen=false;  // search field expanded/collapsed
 let logSearchQuery="";    // free-text search over the trade log
 let logSearchLocked=false;// true after Enter — search stays open through outside clicks until Esc
 let logSearchNavIndex=-1; // index of the currently-focused match, for prev/next navigation; -1 = none focused yet
+let logSearchCurrentId=null; // id of the trade the nav arrows are currently parked on — drives the
+                              // "current match" highlight + auto-opens that row's detail panel so
+                              // prev/next visibly jumps between results instead of only scrolling
 let refSearchOpen=false;  // search field expanded/collapsed (reflections)
 let refSearchQuery="";    // free-text search over reflections
 let refSearchLocked=false;// true after Enter — search stays open through outside clicks until Esc
 let refSearchNavIndex=-1; // index of the currently-focused match, for prev/next navigation; -1 = none focused yet
+let refSearchCurrentId=null; // id of the reflection the nav arrows are currently parked on (see logSearchCurrentId)
 let calendarCollapsed=false; // dashboard's calendar section collapse state
 let resultManual=false;
 let fillSeq=1;
@@ -2237,15 +2258,27 @@ function editTrade(id){
   render();
 }
 function toggleExpand(id){
-  if(expandedIds.has(id))expandedIds.delete(id);else expandedIds.add(id);
+  // A row can be open either because it's manually expanded (expandedIds) or
+  // because it's the search nav's current match (logSearchCurrentId) — a click
+  // should always collapse whichever is actually showing, and if that was the
+  // search-current row, clear the pointer too so it doesn't spring back open
+  // on the next render.
+  const isCurrent=logSearchOpen&&id===logSearchCurrentId;
+  const isOpen=expandedIds.has(id)||isCurrent;
+  if(isOpen){
+    expandedIds.delete(id);
+    if(isCurrent)logSearchCurrentId=null;
+  }else{
+    expandedIds.add(id);
+  }
   render();
 }
 // Master expand/collapse-all toggle for the trade log — collapses everything if
 // any currently visible (filtered/sorted) row is open, otherwise expands all.
 function toggleExpandAll(){
   const list=applyLogSort(applyLogFilters(getFilteredTrades()));
-  const anyOpen=list.some(t=>expandedIds.has(t.id));
-  if(anyOpen)expandedIds.clear();
+  const anyOpen=list.some(t=>expandedIds.has(t.id)||(logSearchOpen&&t.id===logSearchCurrentId));
+  if(anyOpen){expandedIds.clear();logSearchCurrentId=null;}
   else list.forEach(t=>expandedIds.add(t.id));
   render();
 }
@@ -3757,6 +3790,7 @@ function toggleLogSearch(ev){
   logSearchOpen=!logSearchOpen;
   logSearchLocked=false;
   logSearchNavIndex=-1;
+  logSearchCurrentId=null;
   if(!logSearchOpen)logSearchQuery="";
   render();
   if(logSearchOpen){
@@ -3765,12 +3799,13 @@ function toggleLogSearch(ev){
 }
 function closeLogSearch(){
   if(!logSearchOpen)return;
-  logSearchOpen=false;logSearchQuery="";logSearchLocked=false;logSearchNavIndex=-1;
+  logSearchOpen=false;logSearchQuery="";logSearchLocked=false;logSearchNavIndex=-1;logSearchCurrentId=null;
   render();
 }
 function onLogSearchInput(el){
   logSearchQuery=el.value;
   logSearchNavIndex=-1;
+  logSearchCurrentId=null;
   const pos=el.selectionStart;
   render();
   requestAnimationFrame(()=>{
@@ -3778,14 +3813,29 @@ function onLogSearchInput(el){
     if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
   });
 }
+// Enter jumps to the first match and locks the search open; pressing Enter again
+// steps to the next match, Shift+Enter to the previous — the same rhythm as a
+// browser's built-in Ctrl+F find bar, so once you've clicked into the search box
+// you never have to reach for the arrow buttons at all.
 function onLogSearchKeydown(ev){
-  if(ev.key==="Enter"){ev.preventDefault();logSearchLocked=true;}
+  if(ev.key==="Enter"){ev.preventDefault();logSearchLocked=true;logSearchNav(ev.shiftKey?-1:1,ev);}
   else if(ev.key==="Escape"){ev.preventDefault();closeLogSearch();}
 }
 function currentLogSearchMatches(){
   if(!logSearchQuery.trim())return[];
   return applyLogSort(applyLogFilters(getFilteredTrades()));
 }
+// Steps the "current match" pointer to the next/previous result and loops back
+// around at either end (endless cycle). The current match gets a distinct row
+// highlight (see logH()/CSS .trow-current) in addition to the usual bolded text
+// highlight every match already gets, and its detail panel auto-opens — that's
+// what makes each click visibly "jump" to a new result instead of just quietly
+// re-scrolling to content that's already on screen. logSearchCurrentId (not
+// expandedIds) drives the auto-open, so moving on from a match closes its panel
+// back up again unless the person separately toggled it open by hand.
+// Refocusing the search input at the end (rather than only on button clicks)
+// means Enter/Shift+Enter keep working for repeated presses without the person
+// needing to click back into the box each time.
 function logSearchNav(dir,ev){
   if(ev)ev.stopPropagation();
   const list=currentLogSearchMatches();
@@ -3794,11 +3844,13 @@ function logSearchNav(dir,ev){
   else logSearchNavIndex=(logSearchNavIndex+dir+list.length)%list.length;
   const t=list[logSearchNavIndex];
   if(!t)return;
-  expandedIds.add(t.id); // reveal fields (e.g. comments) that only show once expanded
+  logSearchCurrentId=t.id;
   render();
   requestAnimationFrame(()=>{
     const el=document.getElementById(`traderow-${t.id}`);
     if(el)el.scrollIntoView({behavior:"smooth",block:"center"});
+    const input=document.getElementById("logsearch-input");
+    if(input)input.focus();
   });
 }
 function toggleRefSearch(ev){
@@ -3806,6 +3858,7 @@ function toggleRefSearch(ev){
   refSearchOpen=!refSearchOpen;
   refSearchLocked=false;
   refSearchNavIndex=-1;
+  refSearchCurrentId=null;
   if(!refSearchOpen)refSearchQuery="";
   render();
   if(refSearchOpen){
@@ -3814,12 +3867,13 @@ function toggleRefSearch(ev){
 }
 function closeRefSearch(){
   if(!refSearchOpen)return;
-  refSearchOpen=false;refSearchQuery="";refSearchLocked=false;refSearchNavIndex=-1;
+  refSearchOpen=false;refSearchQuery="";refSearchLocked=false;refSearchNavIndex=-1;refSearchCurrentId=null;
   render();
 }
 function onRefSearchInput(el){
   refSearchQuery=el.value;
   refSearchNavIndex=-1;
+  refSearchCurrentId=null;
   const pos=el.selectionStart;
   render();
   requestAnimationFrame(()=>{
@@ -3827,14 +3881,17 @@ function onRefSearchInput(el){
     if(ni){ni.focus();try{ni.setSelectionRange(pos,pos);}catch(e){}}
   });
 }
+// See onLogSearchKeydown() above — same Enter/Shift+Enter find-bar rhythm.
 function onRefSearchKeydown(ev){
-  if(ev.key==="Enter"){ev.preventDefault();refSearchLocked=true;}
+  if(ev.key==="Enter"){ev.preventDefault();refSearchLocked=true;refSearchNav(ev.shiftKey?-1:1,ev);}
   else if(ev.key==="Escape"){ev.preventDefault();closeRefSearch();}
 }
 function currentRefSearchMatches(){
   if(!refSearchQuery.trim())return[];
   return getFilteredReflections().filter(refSearchMatch);
 }
+// See logSearchNav() above for the "current match" + refocus design — same idea
+// here, minus the auto-open (reflection cards always show their full content).
 function refSearchNav(dir,ev){
   if(ev)ev.stopPropagation();
   const list=currentRefSearchMatches();
@@ -3843,10 +3900,13 @@ function refSearchNav(dir,ev){
   else refSearchNavIndex=(refSearchNavIndex+dir+list.length)%list.length;
   const r=list[refSearchNavIndex];
   if(!r)return;
+  refSearchCurrentId=r.id;
   render();
   requestAnimationFrame(()=>{
     const el=document.getElementById(`reflectionrow-${r.id}`);
     if(el)el.scrollIntoView({behavior:"smooth",block:"center"});
+    const input=document.getElementById("refsearch-input");
+    if(input)input.focus();
   });
 }
 function refSearchMatch(r){
@@ -3932,7 +3992,7 @@ function logH(en){
     return`<th class="sortable${active?" sorted":""}" onclick="setLogSort('${h.key}')" title="sort by ${h.label}">${h.label}${arrow}</th>`;
   }).join("");
   return`<div>
-<div class="logfilterbar">
+<div class="logfilterbar${logSearchOpen?" sticky-search":""}">
   ${trades.length>0?`
   <button class="topicon" onclick="toggleExpandAll()" aria-label="${anyExpanded?"collapse all":"expand all"}" data-tt="${anyExpanded?"collapse all":"expand all"}">${anyExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
   <span class="topicon" style="cursor:default;margin-right:-4px" aria-label="filters">${ICON_FILTER}</span>
@@ -4043,8 +4103,13 @@ ${logList.map(t=>{
   const rc=t.wl==="Win"?"var(--g)":t.wl==="Loss"?"var(--r)":"var(--t)";
   const col=sc(t.rs),bg=sbg(t.rs),bd=sbd(t.rs);
   const sl=t.rs!==null?`${t.fc}/${t.ac}`:"—";
-  const row=`<tr class="trow" id="traderow-${t.id}" onclick="toggleExpand(${t.id})">
-<td class="chev">${expandedIds.has(t.id)?"▾":"▸"}</td>
+  // A search match auto-opens its row via logSearchCurrentId (not expandedIds) so
+  // stepping to the next result doesn't permanently pile up every row it's ever
+  // visited — moving on closes it back up unless it was also opened by hand.
+  const isCurrent=logSearchOpen&&t.id===logSearchCurrentId;
+  const isOpen=expandedIds.has(t.id)||isCurrent;
+  const row=`<tr class="trow${isCurrent?" trow-current":""}" id="traderow-${t.id}" onclick="toggleExpand(${t.id})">
+<td class="chev">${isOpen?"▾":"▸"}</td>
 <td style="font-size:var(--fsm);color:var(--t2)">${hl(dispDate(t.date),logSearchQuery)}</td>
 <td style="font-weight:700;font-size:var(--fbase)">${hl(t.ticker.toUpperCase(),logSearchQuery)}</td>
 <td><span class="pill pneu">${hl(t.setup,logSearchQuery)}</span></td>
@@ -4060,7 +4125,7 @@ ${logList.map(t=>{
 <td><button class="delbtn" onclick="event.stopPropagation();editTrade(${t.id})" title="edit trade">✎</button></td>
 <td><button class="delbtn" onclick="event.stopPropagation();del(${t.id})" title="delete trade">×</button></td>
 </tr>`;
-  return row+(expandedIds.has(t.id)?expandRowH(t):"");
+  return row+(isOpen?expandRowH(t):"");
 }).join("")}
 </tbody></table></div>`}
 ${trades.length>0?`<div class="lcountbottom">${logList.length} of ${trades.length} trades shown</div>`:""}
@@ -4218,7 +4283,7 @@ function reflectionH(){
   const preSearchList=getFilteredReflections();
   const filteredOut=periodMode!=="all"&&reflections.length>0&&preSearchList.length===0;
   return`<div>
-<div class="lbar">
+<div class="lbar${refSearchOpen?" sticky-search":""}">
   <span class="lcount" style="font-size:var(--fxs);font-weight:300">${list.length} of ${reflections.length} reflection${reflections.length!==1?"s":""} shown</span>
   <div class="logbaricons">
     <span class="searchwrap">
@@ -4270,8 +4335,9 @@ ${reflections.length===0
   ?`<div class="empty"><div style="font-size:28px;margin-bottom:8px">🔍</div><p>no reflections match your search</p></div>`
   :list.map(r=>{
     const secs=nonEmptySections(r);
+    const isCurrent=refSearchOpen&&r.id===refSearchCurrentId;
     return `
-<div class="fcard" id="reflectionrow-${r.id}" style="margin-bottom:10px">
+<div class="fcard${isCurrent?" fcard-current":""}" id="reflectionrow-${r.id}" style="margin-bottom:10px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:18px">
     <span style="font-size:var(--fsm);color:var(--refhead);font-weight:700;letter-spacing:.03em">${hl(refHeaderLabel(r),refSearchQuery)}</span>
     <div style="display:flex;align-items:center;gap:12px">
