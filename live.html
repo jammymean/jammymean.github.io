@@ -665,6 +665,7 @@ let logSearchNavIndex=-1; // index of the currently-focused match, for prev/next
 let refSearchOpen=false;  // search field expanded/collapsed (reflections)
 let refSearchQuery="";    // free-text search over reflections
 let refSearchLocked=false;// true after Enter — search stays open through outside clicks until Esc
+let refSearchNavIndex=-1; // index of the currently-focused match, for prev/next navigation; -1 = none focused yet
 let calendarCollapsed=false; // dashboard's calendar section collapse state
 let resultManual=false;
 let fillSeq=1;
@@ -3804,6 +3805,7 @@ function toggleRefSearch(ev){
   if(ev)ev.stopPropagation();
   refSearchOpen=!refSearchOpen;
   refSearchLocked=false;
+  refSearchNavIndex=-1;
   if(!refSearchOpen)refSearchQuery="";
   render();
   if(refSearchOpen){
@@ -3812,11 +3814,12 @@ function toggleRefSearch(ev){
 }
 function closeRefSearch(){
   if(!refSearchOpen)return;
-  refSearchOpen=false;refSearchQuery="";refSearchLocked=false;
+  refSearchOpen=false;refSearchQuery="";refSearchLocked=false;refSearchNavIndex=-1;
   render();
 }
 function onRefSearchInput(el){
   refSearchQuery=el.value;
+  refSearchNavIndex=-1;
   const pos=el.selectionStart;
   render();
   requestAnimationFrame(()=>{
@@ -3827,6 +3830,24 @@ function onRefSearchInput(el){
 function onRefSearchKeydown(ev){
   if(ev.key==="Enter"){ev.preventDefault();refSearchLocked=true;}
   else if(ev.key==="Escape"){ev.preventDefault();closeRefSearch();}
+}
+function currentRefSearchMatches(){
+  if(!refSearchQuery.trim())return[];
+  return getFilteredReflections().filter(refSearchMatch);
+}
+function refSearchNav(dir,ev){
+  if(ev)ev.stopPropagation();
+  const list=currentRefSearchMatches();
+  if(!list.length)return;
+  if(refSearchNavIndex<0)refSearchNavIndex=dir>0?0:list.length-1;
+  else refSearchNavIndex=(refSearchNavIndex+dir+list.length)%list.length;
+  const r=list[refSearchNavIndex];
+  if(!r)return;
+  render();
+  requestAnimationFrame(()=>{
+    const el=document.getElementById(`reflectionrow-${r.id}`);
+    if(el)el.scrollIntoView({behavior:"smooth",block:"center"});
+  });
 }
 function refSearchMatch(r){
   // Matches header label, entry date, and every section's question/answer text —
@@ -4201,6 +4222,10 @@ function reflectionH(){
   <span class="lcount" style="font-size:var(--fxs);font-weight:300">${list.length} of ${reflections.length} reflection${reflections.length!==1?"s":""} shown</span>
   <div class="logbaricons">
     <span class="searchwrap">
+      ${refSearchOpen&&currentRefSearchMatches().length>0?`
+      <button class="topicon" onclick="refSearchNav(-1,event)" aria-label="previous match" data-tt="previous match">${ICON_TRILEFT}</button>
+      <button class="topicon" onclick="refSearchNav(1,event)" aria-label="next match" data-tt="next match">${ICON_TRIRIGHT}</button>
+      `:""}
       ${refSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="refsearch-input" placeholder="" value="${escAttr(refSearchQuery)}" oninput="onRefSearchInput(this)" onkeydown="onRefSearchKeydown(event)"/></span>`
       :`<button class="topicon" onclick="toggleRefSearch(event)" aria-label="search reflections" data-tt="search reflections">${ICON_SEARCH}</button>`}
     </span>
@@ -4246,7 +4271,7 @@ ${reflections.length===0
   :list.map(r=>{
     const secs=nonEmptySections(r);
     return `
-<div class="fcard" style="margin-bottom:10px">
+<div class="fcard" id="reflectionrow-${r.id}" style="margin-bottom:10px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:18px">
     <span style="font-size:var(--fsm);color:var(--refhead);font-weight:700;letter-spacing:.03em">${hl(refHeaderLabel(r),refSearchQuery)}</span>
     <div style="display:flex;align-items:center;gap:12px">
