@@ -72,6 +72,12 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 [data-tt]{position:relative}
 [data-tt]::after{content:attr(data-tt);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--tabdashbg);color:var(--tabdash);border:.5px solid var(--tabdashbd);font-size:11px;font-weight:500;line-height:1.3;padding:5px 9px;border-radius:6px;white-space:normal;width:max-content;max-width:240px;text-align:center;opacity:0;pointer-events:none;transition:opacity .1s;z-index:80;box-shadow:0 4px 14px rgba(0,0,0,.22)}
 [data-tt]:hover::after{opacity:1;transition-delay:.15s}
+/* item B — a tooltip that opened via CSS :hover doesn't close on its own when the
+   page loses focus without the mouse actually leaving the button (e.g. a Google
+   sign-in popup steals focus while the pointer is still sitting on the connect
+   icon). Forcing opacity off on window blur, and letting :hover retake over on
+   focus, means the tooltip never gets stuck floating over a popup. */
+body.tt-blurred [data-tt]::after{opacity:0!important}
 .themetoggle:hover{opacity:.75}
 .themetoggle svg{width:16px;height:16px;display:block}
 .banner{background:var(--s2);border:.5px solid var(--bd);border-radius:var(--radl);padding:10px 14px;margin-bottom:.9rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:var(--fbase);color:var(--t2)}
@@ -166,8 +172,6 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .sfill{height:100%;border-radius:3px;transition:width .3s}
 /* Disqualifiers */
 .dqhead{display:flex;justify-content:space-between;align-items:center;margin:0;padding:0;border:none}
-.dqedit{font-size:var(--fxs);color:var(--t3);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-family:var(--sans)}
-.dqedit:hover{color:var(--t)}
 .dqlist{display:flex;flex-direction:column;gap:6px}
 .dqitem{display:flex;align-items:stretch;border-radius:var(--rad);overflow:hidden;border:.5px solid var(--bd)}
 .dqitem.viol{border-color:var(--rbd)}
@@ -432,6 +436,11 @@ let driveConnected=false;
 let driveConnecting=false;
 let driveSyncing=false;
 let driveSyncError="";
+// Visual severity for a non-empty driveSyncError: "quiet" (still shows the normal
+// connected checkmark, message only in the tooltip — retry attempts 1-3), "warn"
+// (amber warning icon — attempt 4+), "error" (red error icon — breaker tripped,
+// or any hard failure that isn't a quiet background retry). See driveRegisterRetryFailure().
+let driveSyncErrorSeverity="";
 let driveAppDataFileId=null;
 let driveMirrorFileId=null;
 let driveKnownModifiedTime=null;  // Drive's own modifiedTime for the appData file, cached after every successful load/save — used to detect another device having saved since
@@ -629,6 +638,7 @@ function fmtSyncTime(iso){
 // ever flip driveConnecting/driveSyncing back off. Without this the spinner
 // (and the dropdown behind it) can be stuck indefinitely. 20s is generous for
 // any real network round trip but short enough to never look "hung."
+function driveClearSyncError(){driveSyncError="";driveSyncErrorSeverity="";}
 function driveClearWatchdog(){if(driveWatchdogTimer){clearTimeout(driveWatchdogTimer);driveWatchdogTimer=null;}}
 function driveStartWatchdog(ms){
   driveClearWatchdog();
@@ -642,7 +652,7 @@ function driveStartWatchdog(ms){
     driveConnecting=false;driveSyncing=false;driveSaveInFlight=false;driveSaveQueued=false;
     drivePendingSync=false;driveStaleConflict=false;driveMenuOpen=false;
     driveAttemptKind=null;driveSwitchPrevEmail=null;
-    driveSyncError="connection timed out — click retry";
+    driveSyncError="timed out - retry";driveSyncErrorSeverity="error";
     render();
   },ms||20000);
 }
@@ -653,12 +663,24 @@ function driveStartWatchdog(ms){
 // the same way, so there's always a way out no matter what state it's stuck in.
 function driveStatusHtml(){
   if(driveConnecting||driveSyncing)return`<span class="drivemenu-wrap">
-    <button class="topicon spin" onclick="toggleDriveMenu(event)" aria-label="${driveConnecting?"connecting":"syncing"} — click disconnect or force quit to cancel" data-tt="${driveConnecting?"connecting…":"syncing…"} click disconnect or force quit to cancel"><span class="spin-ico">${DRIVE_SPIN_SVG}</span></button>
+    <button class="topicon spin" onclick="toggleDriveMenu(event)" aria-label="${driveConnecting?"connecting":"syncing"} — click disconnect or force quit to cancel" data-tt="${driveConnecting?"connecting...":"syncing..."}"><span class="spin-ico">${DRIVE_SPIN_SVG}</span><span class="stop-ico">${ICON_X}</span></button>
     ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
-  if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" aria-label="newer changes were saved from another device — click to reload them" data-tt="newer changes saved elsewhere — click to reload">${ICON_WARN}</button>`;
+  if(driveStaleConflict)return`<button class="topicon warn" onclick="driveReloadLatest()" aria-label="newer changes were saved from another device — click to reload them" data-tt="reload - newer changes saved">${ICON_WARN}</button>`;
   if(drivePendingSync)return`<span class="drivemenu-wrap">
-    <button class="topicon warn" onclick="toggleDriveMenu(event)" aria-label="offline — your changes are saved locally and will sync automatically once you're back online" data-tt="offline — saved locally, will sync automatically">${ICON_CLOCK}</button>
+    <button class="topicon warn" onclick="toggleDriveMenu(event)" aria-label="offline — your changes are saved locally and will sync automatically once you're back online" data-tt="offline - sync resumes once connection established">${ICON_CLOCK}</button>
+    ${driveMenuOpen?driveMenuHtml():""}
+  </span>`;
+  // item C2 — quiet retries (attempts 1-3) still read as "connected": same
+  // checkmark icon as the normal connected state, just with the retry message
+  // in the tooltip instead of "connected". Only attempt 4+ (severity "warn")
+  // and the tripped breaker (severity "error") swap the icon itself.
+  if(driveSyncError&&driveSyncErrorSeverity==="quiet")return`<span class="drivemenu-wrap">
+    <button class="topicon ok" onclick="toggleDriveMenu(event)" aria-label="${escAttr(driveSyncError)}" data-tt="${escAttr(driveSyncError)}">${ICON_CHECK}</button>
+    ${driveMenuOpen?driveMenuHtml():""}
+  </span>`;
+  if(driveSyncError&&driveSyncErrorSeverity==="warn")return`<span class="drivemenu-wrap">
+    <button class="topicon warn" onclick="toggleDriveMenu(event)" aria-label="${escAttr(driveSyncError)}" data-tt="${escAttr(driveSyncError)}">${ICON_WARN}</button>
     ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
   if(driveSyncError)return`<span class="drivemenu-wrap">
@@ -666,7 +688,7 @@ function driveStatusHtml(){
     ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
   if(driveConnected)return`<span class="drivemenu-wrap">
-    <button class="topicon ok" onclick="toggleDriveMenu(event)" aria-label="connected to Google Drive — click for account options" data-tt="connected — click for account options">${ICON_CHECK}</button>
+    <button class="topicon ok" onclick="toggleDriveMenu(event)" aria-label="connected to Google Drive — click for account options" data-tt="connected">${ICON_CHECK}</button>
     ${driveMenuOpen?driveMenuHtml():""}
   </span>`;
   return`<button class="topicon" onclick="connectDrive()" aria-label="connect Google Drive" data-tt="connect Google Drive">${ICON_LINK}</button>`;
@@ -733,6 +755,11 @@ document.addEventListener("visibilitychange",()=>{
     driveRetryTick();
   }
 });
+// item B — see the body.tt-blurred CSS rule above: proactively hides any open
+// [data-tt] tooltip the moment the window loses focus (e.g. a Google sign-in
+// popup opening), rather than leaving it floating until the mouse next moves.
+window.addEventListener("blur",()=>{document.body.classList.add("tt-blurred");});
+window.addEventListener("focus",()=>{document.body.classList.remove("tt-blurred");});
 async function driveFetchUserEmail(){
   try{
     const res=await driveApiFetch("https://www.googleapis.com/oauth2/v3/userinfo");
@@ -794,14 +821,14 @@ async function attemptDriveAutoConnect(){
     driveTokenExpiresAt=cached.expiresAt; // item 9 — reusing the cache, not calling cacheDriveToken(), so set this explicitly
     driveForceQuitted=false; // see connectDrive() — must clear before a fresh attempt or the callback silently no-ops
     driveConnecting=true;renderDriveStatus();
-    driveSyncError="";
+    driveClearSyncError();
     driveStartWatchdog();
     await driveConnectFlow();
     if(driveConnected)return;
     // Cached token turned out to be invalid despite looking unexpired (e.g. revoked
     // externally) — clear the noisy error from that attempt and fall through to a
     // silent re-auth instead of leaving an alarming message on screen.
-    driveSyncError="";
+    driveClearSyncError();
   }
   // Either expired, or the cached token didn't actually work — try a silent
   // (no popup) re-auth. Succeeds if the browser still has an active Google
@@ -820,7 +847,7 @@ async function attemptDriveAutoConnect(){
     if(driveForceQuitted)return; // user hit stop while this was still waiting on Google — discard the late response
     driveClearWatchdog();driveAttemptKind=null;
     if(resp.error){
-      driveConnecting=false;driveSyncError="";
+      driveConnecting=false;driveClearSyncError();
       renderDriveStatus();
       return;
     }
@@ -852,12 +879,14 @@ function driveTokenErrorCallback(err){
   driveConnecting=false;
   if(kind==="switch"){
     driveUserEmail=driveSwitchPrevEmail;driveSwitchPrevEmail=null;
-    driveSyncError=blocked?"popup blocked — allow popups for this site, then click switch account again":"";
+    if(blocked){driveSyncError="pop-up blocked, allow and re-switch";driveSyncErrorSeverity="error";}
+    else driveClearSyncError();
   }else if(kind==="connect"){
-    driveSyncError=blocked?"popup blocked — allow popups for this site, then click retry":"";
+    if(blocked){driveSyncError="pop-up blocked, allow and retry";driveSyncErrorSeverity="error";}
+    else driveClearSyncError();
   }else{
     // "auto" / "refresh" / unknown — background paths fail quietly, no banner
-    driveSyncError="";
+    driveClearSyncError();
   }
   renderDriveStatus();
 }
@@ -930,7 +959,7 @@ function connectDrive(){
   }
   driveForceQuitted=false; // clear any stale force-stop from a previous attempt, or this new attempt's callback will silently no-op forever
   driveAttemptKind="connect";
-  driveConnecting=true;driveSyncError="";renderDriveStatus();
+  driveConnecting=true;driveClearSyncError();renderDriveStatus();
   // sanity-check fix (items 4/6) — this used to have no watchdog at all (only the
   // silent auto-reconnect path did), so an abandoned/blocked popup with no
   // error_callback support would've spun forever. 2 minutes is generous for a
@@ -941,7 +970,7 @@ function connectDrive(){
     driveClearWatchdog();driveAttemptKind=null;
     if(resp.error){
       driveConnecting=false;
-      driveSyncError="sign-in failed ("+resp.error+") — click retry";
+      driveSyncError="sign-in failed ("+resp.error+") - retry";driveSyncErrorSeverity="error";
       renderDriveStatus();
       return;
     }
@@ -967,7 +996,7 @@ function switchDriveAccount(){
   driveForceQuitted=false; // see connectDrive() — must clear before a fresh attempt or the callback silently no-ops
   driveAttemptKind="switch";
   driveSwitchPrevEmail=driveUserEmail; // snapshot — restored by driveTokenErrorCallback if this attempt is abandoned
-  driveConnecting=true;driveSyncError="";driveUserEmail=null;renderDriveStatus();
+  driveConnecting=true;driveClearSyncError();driveUserEmail=null;renderDriveStatus();
   driveStartWatchdog(120000); // see connectDrive() — same reasoning
   tc.callback=async(resp)=>{
     if(driveForceQuitted)return;
@@ -975,7 +1004,7 @@ function switchDriveAccount(){
     if(resp.error){
       driveConnecting=false;
       driveUserEmail=driveSwitchPrevEmail;driveSwitchPrevEmail=null; // restore — this was never actually a disconnect
-      driveSyncError="switch account failed ("+resp.error+") — click switch account again";
+      driveSyncError="switch failed ("+resp.error+") - re-switch";driveSyncErrorSeverity="error";
       renderDriveStatus();
       return;
     }
@@ -997,7 +1026,7 @@ function driveFullTeardown(){
     try{google.accounts.oauth2.revoke(driveAccessToken,()=>{});}catch(e){}
   }
   driveAccessToken=null;driveConnected=false;driveConnecting=false;driveSyncing=false;
-  driveAppDataFileId=null;driveMirrorFileId=null;driveSyncError="";
+  driveAppDataFileId=null;driveMirrorFileId=null;driveClearSyncError();
   driveKnownModifiedTime=null;drivePendingSync=false;driveStaleConflict=false;
   driveMenuOpen=false;driveUserEmail=null;                    // item 6
   driveTokenExpiresAt=0;clearDriveRefreshTimer();              // item 9
@@ -1139,7 +1168,7 @@ function driveSyncPayload(){
 }
 async function driveConnectFlow(){
   driveBreakerTripped=getDriveBreakerFlag(); // pull in whatever a previous session left behind before deciding anything below
-  driveSyncError="";
+  driveClearSyncError();
   driveBeginAttempt();
   try{
     const foundAppData=await driveFindFile(DRIVE_APPDATA_NAME,true);
@@ -1187,7 +1216,7 @@ async function driveConnectFlow(){
   }catch(e){
     if(driveForceQuitted){driveForceQuitted=false;return;} // manual stop — driveForceQuit() already reset everything and rendered
     driveConnecting=false;
-    driveSyncError=(e.message||String(e));
+    driveSyncError="connect failed ("+(e.message||String(e))+") - retry";driveSyncErrorSeverity="error";
     render();
   }
 }
@@ -1207,10 +1236,10 @@ async function driveReloadLatest(){
     if(d.dq&&d.dq.length)dq=d.dq;
     driveKnownModifiedTime=await driveGetModifiedTime(driveAppDataFileId);
     try{localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));}catch(e){}
-    driveSyncError="";
+    driveClearSyncError();
   }catch(e){
     if(driveForceQuitted){driveForceQuitted=false;return;}
-    driveSyncError="reload failed ("+(e.message||e)+") — click retry";
+    driveSyncError="reload failed ("+(e.message||e)+") - retry";driveSyncErrorSeverity="error";
   }
   driveSyncing=false;render();
 }
@@ -1265,19 +1294,36 @@ function driveRegisterRetryFailure(isAuthError){
   driveConsecAuthFailures=isAuthError?driveConsecAuthFailures+1:0;
   if(driveConsecAuthFailures>=3){
     setDriveBreaker(true);clearDriveRetry();
-    driveSyncError="can't reconnect — click disconnect, then reconnect";
+    driveSyncError="can't connect - click disconnect and re-login";driveSyncErrorSeverity="error";
     renderDriveStatus();
     return;
   }
+  if(isAuthError){
+    // A lone (not-yet-breaker) auth rejection — surfaced right away as an error
+    // rather than folded into the quiet-retry tiering below, since resending the
+    // same rejected token can't fix an auth problem the way it might a network blip.
+    driveSyncError="connection needs reauthorising - disconnect and re-login";driveSyncErrorSeverity="error";
+    driveRetryDelayIdx=Math.min(driveRetryDelayIdx+1,DRIVE_RETRY_DELAYS.length-1);
+    scheduleDriveRetry();
+    renderDriveStatus();
+    return;
+  }
+  // item C2 — generic (non-auth) failures step through three tiers before the
+  // breaker trips: attempts 1-3 stay quiet (still reads as "connected", the
+  // retry message only lives in the tooltip); attempt 4 switches to a visible
+  // warning icon but keeps retrying in the background; attempt 5+ trips the
+  // breaker, switches to the error icon, and stops.
   if(driveConsecFailures>=5){
     setDriveBreaker(true);clearDriveRetry();
-    driveSyncError="sync paused after repeated failures — click force quit, then reconnect";
+    driveSyncError="sync paused (repeated failures) - force quit and re-login";driveSyncErrorSeverity="error";
     renderDriveStatus();
     return;
   }
-  driveSyncError=isAuthError
-    ?"connection needs re-authorizing — click disconnect, then reconnect"
-    :"sync failed — retrying automatically, or click retry now";
+  if(driveConsecFailures>=4){
+    driveSyncError="sync failed - disconnect and re-login";driveSyncErrorSeverity="warn";
+  }else{
+    driveSyncError="sync failed - retrying automatically";driveSyncErrorSeverity="quiet";
+  }
   driveRetryDelayIdx=Math.min(driveRetryDelayIdx+1,DRIVE_RETRY_DELAYS.length-1);
   scheduleDriveRetry();
   renderDriveStatus();
@@ -1318,7 +1364,7 @@ async function retryMirrorWrite(){
     await driveUpdateFile(driveMirrorFileId,driveSyncPayload());
     setMirrorDirty(false);
     driveRegisterRetrySuccess();
-    driveSyncError="";
+    driveClearSyncError();
     if(!drivePendingSync)clearDriveRetry();
     renderDriveStatus();
   }catch(e){
@@ -1343,7 +1389,7 @@ async function driveSaveAll(){
     return;
   }
   if(!navigator.onLine){
-    drivePendingSync=true;driveSyncError="offline — saved locally, will sync automatically once you're back online";renderDriveStatus();
+    drivePendingSync=true;driveSyncError="offline - sync resumes once connection established";renderDriveStatus();
     scheduleDriveRetry();
     return;
   }
@@ -1356,7 +1402,7 @@ async function driveSaveAll(){
     if(driveAppDataFileId&&driveKnownModifiedTime){
       const current=await driveGetModifiedTime(driveAppDataFileId);
       if(current&&current!==driveKnownModifiedTime){
-        driveSyncing=false;driveStaleConflict=true;driveSyncError="";
+        driveSyncing=false;driveStaleConflict=true;driveClearSyncError();
         driveSaveInFlight=false;driveSaveQueued=false; // a real conflict means "reload latest" is the next step, not a silent retry
         renderDriveStatus();
         return;
@@ -1389,7 +1435,7 @@ async function driveSaveAll(){
         return;
       }
     }
-    driveSyncError="";drivePendingSync=false;
+    driveClearSyncError();drivePendingSync=false;
     driveRegisterRetrySuccess();
     clearDriveRetry();
     maybeRunWeeklyBackup(); // item 7 — fire and forget, checked on every successful save
@@ -1400,7 +1446,7 @@ async function driveSaveAll(){
     const looksOffline=!isAuthError&&(!navigator.onLine||/Failed to fetch|NetworkError|network error/i.test(msg));
     drivePendingSync=true;
     if(looksOffline){
-      driveSyncError="offline — saved locally, will sync automatically once you're back online";
+      driveSyncError="offline - sync resumes once connection established";
       scheduleDriveRetry();
     }else{
       driveRegisterRetryFailure(isAuthError);
@@ -2172,7 +2218,7 @@ function refreshScreenshots(){
   const container=document.getElementById("ss-section");
   if(!container)return;
   container.innerHTML=`
-<div class="fsec" style="margin:0;padding:0;border:none">screenshots <span style="font-weight:400;color:var(--t3)"> — chart snapshots</span></div>
+<div class="fsec" style="margin:0 0 10px;padding:0;border:none">screenshots <span style="font-weight:400;color:var(--t3)"> — chart snapshots</span></div>
 <label class="ssupload" for="ss-file-input">${ICON_UPLOAD}<span class="ssuploadnote">.jpeg &amp; .png only</span></label>
 <input id="ss-file-input" class="ssinput" type="file" accept="image/jpeg,image/png" multiple onchange="handleScreenshotUpload(event)"/>
 ${form.screenshots.length>0
@@ -3216,7 +3262,7 @@ function refreshRules(){
   const col=sc(score);
 
   container.innerHTML=`
-<div class="fsec" style="margin:0;padding:0;border:none">rules checklist <span style="font-weight:400;color:var(--t3)"> — tap yes / no for each</span></div>
+<div class="fsec" style="margin:0 0 10px;padding:0;border:none">rules checklist <span style="font-weight:400;color:var(--t3)"> — tap yes / no for each</span></div>
 <div class="rgrid">
 ${RULES.map(rule=>{
   const a=ra[rule.id];
@@ -3247,7 +3293,7 @@ function refreshDq(){
 
   if(editingDq){
     container.innerHTML=`
-<div class="dqhead"><span class="fsec" style="margin:0;padding:0;border:none">trade disqualifiers</span></div>
+<div class="dqhead"><span class="fsec" style="margin:0 0 10px;padding:0;border:none">trade disqualifiers</span></div>
 <div style="font-size:var(--fxs);color:var(--t3);margin-bottom:8px">Edit, remove, or add your personal disqualifiers — hard reasons you are not allowed to take a trade.</div>
 ${dq.map(d=>`<div class="dqeditrow"><input id="dqe-${d.id}" type="text" value="${d.text.replace(/"/g,'&quot;')}"/><button class="delbtn" onclick="removeDq('${d.id}')" title="remove">×</button></div>`).join("")}
 <button class="btn" onclick="addDq()" style="margin-top:2px;margin-right:6px">+ add disqualifier</button>
@@ -3257,8 +3303,8 @@ ${dq.map(d=>`<div class="dqeditrow"><input id="dqe-${d.id}" type="text" value="$
 
   container.innerHTML=`
 <div class="dqhead">
-  <span class="fsec" style="margin:0;padding:0;border:none">trade disqualifiers <span style="font-weight:400;color:var(--t3)"> — did any apply to this trade?</span></span>
-  <button class="dqedit" onclick="toggleDqEdit()">edit list</button>
+  <span class="fsec" style="margin:0 0 10px;padding:0;border:none">trade disqualifiers <span style="font-weight:400;color:var(--t3)"> — did any apply to this trade?</span></span>
+  <button class="topicon" onclick="toggleDqEdit()" aria-label="edit disqualifier list" data-tt="edit disqualifier list" style="font-size:15px">✎</button>
 </div>
 <div class="dqlist">
 ${dq.map(d=>{
@@ -3803,9 +3849,9 @@ ${showForm?`
     </div>
   </div>
   <div id="risk-preview"></div>
-  <div id="rules-section" style="margin-top:2.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
-  <div id="dq-section" style="margin-top:2.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
-  <div id="ss-section" style="margin-top:2.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
+  <div id="rules-section" style="margin-top:1.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
+  <div id="dq-section" style="margin-top:1.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
+  <div id="ss-section" style="margin-top:1.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
   <div class="fsec">comments <span style="font-weight:400;color:var(--t3)"> — anything else worth remembering about this trade</span></div>
   <textarea id="fi-comments" rows="3" placeholder="e.g. news catalyst, how it felt, what you'd do differently...">${form.comments}</textarea>
   <div style="margin-top:2px">
