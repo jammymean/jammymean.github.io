@@ -61,6 +61,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height:100v
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:1.5rem}
 .brand{font-size:var(--fxs);color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
 h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
+h1.h1row{display:flex;align-items:center;gap:7px}
+.quotadot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.quotadot-amber{background:var(--a)}
+.quotadot-red{background:var(--r)}
 .sub{font-size:var(--fbase);color:var(--t2);margin-bottom:1.75rem}
 .themetoggle{width:16px;height:16px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 /* Fast custom tooltip — shows immediately on hover via CSS rather than relying on
@@ -121,7 +125,7 @@ body.tt-blurred [data-tt]::after{opacity:0!important}
 .pbnav{display:flex;align-items:center;gap:5px;margin-left:9px;font-size:var(--fxs);font-weight:300;color:var(--t3)}
 .pbarrow{color:var(--t3);cursor:pointer;transition:color .15s;line-height:1;padding:0 2px;margin-right:2px}
 .pbarrow:hover{color:var(--t)}
-.pblabel{font-size:var(--fxs);font-weight:300;color:var(--t3);margin-right:6px}
+.pblabel{font-size:var(--fxs);font-weight:300;color:var(--t3);margin-right:2px}
 .pbtoday{font-size:var(--fxs);font-weight:300;color:var(--p);cursor:pointer;background:none;border:none;padding:0}
 .pbtoday:hover{opacity:.8}
 .pbcustom{display:flex;align-items:center;gap:6px;margin-left:9px}
@@ -414,6 +418,156 @@ const MON=["January","February","March","April","May","June","July","August","Se
 const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const KEY="wss_j3";
 
+// ── Screenshot store (IndexedDB) ────────────────────────────────────────────────
+// Screenshots are the thing that blows past localStorage's ~5-10MB quota, so they
+// live here instead — IndexedDB quota is typically hundreds of MB+. localStorage
+// keeps a lightweight copy of every trade (screenshots stripped to name-only);
+// this store holds the actual dataUrls, keyed by trade id. Drive is unaffected —
+// it always gets the full in-memory `trades` array via driveSyncPayload().
+const IDB_NAME="wss_screenshots";
+const IDB_STORE="screenshots";
+let idbOpenPromise=null;
+function idbOpen(){
+  if(idbOpenPromise)return idbOpenPromise;
+  idbOpenPromise=new Promise((resolve,reject)=>{
+    try{
+      const req=indexedDB.open(IDB_NAME,1);
+      req.onupgradeneeded=()=>{req.result.createObjectStore(IDB_STORE);};
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error);
+    }catch(e){reject(e);}
+  });
+  return idbOpenPromise;
+}
+async function idbPutScreenshots(tradeId,screenshots){
+  try{
+    const db=await idbOpen();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(IDB_STORE,"readwrite");
+      tx.objectStore(IDB_STORE).put(screenshots,tradeId);
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+    });
+  }catch(e){console.log("[idb] put failed:",e.message||e);}
+}
+async function idbGetScreenshots(tradeId){
+  try{
+    const db=await idbOpen();
+    return await new Promise((resolve,reject)=>{
+      const req=db.transaction(IDB_STORE,"readonly").objectStore(IDB_STORE).get(tradeId);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>reject(req.error);
+    });
+  }catch(e){console.log("[idb] get failed:",e.message||e);return null;}
+}
+async function idbDeleteScreenshots(tradeId){
+  try{
+    const db=await idbOpen();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(IDB_STORE,"readwrite");
+      tx.objectStore(IDB_STORE).delete(tradeId);
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+    });
+  }catch(e){console.log("[idb] delete failed:",e.message||e);}
+}
+// True once a screenshots array holds real image data (vs. the lightweight
+// {name} refs that live in localStorage).
+function isHydrated(screenshots){
+  return !!(screenshots&&screenshots.length>0&&screenshots[0].dataUrl);
+}
+function stripScreenshotsForLocal(arr){
+  return arr.map(t=>({...t,screenshots:(t.screenshots||[]).map(s=>({name:s.name}))}));
+}
+// Writes lightweight trade data to localStorage and fires off the full
+// screenshot payloads to IndexedDB in the background. Used by every call site
+// that used to do a raw localStorage.setItem(KEY,...). Trades flagged
+// localCacheExcluded (evicted by the auto-scrubber below) are skipped —
+// they're intentionally not cached locally; Drive still has the originals.
+function persistLocal(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify({trades:stripScreenshotsForLocal(trades),reflections,dq}));
+  }catch(e){
+    alert("Storage is full — the browser's local storage limit has been hit. Export a backup (.json) and let me know if you're still seeing this after the screenshot storage change.");
+  }
+  trades.forEach(t=>{
+    if(t.screenshots&&t.screenshots.length>0&&!t.localCacheExcluded)idbPutScreenshots(t.id,t.screenshots);
+  });
+  refreshStorageQuota();
+}
+// After load() pulls the lightweight trades from localStorage, this fetches
+// the real screenshot data back from IndexedDB and merges it in, then
+// re-renders. Also opportunistically migrates any still-legacy trades (full
+// dataUrl already embedded from before this change, or just-fetched from
+// Drive) into IndexedDB so future localStorage writes can stay lightweight.
+// Skips anything flagged localCacheExcluded — nothing to fetch, we evicted it.
+async function hydrateScreenshotsFromIDB(){
+  const toFetch=trades.filter(t=>t.screenshots&&t.screenshots.length>0&&!isHydrated(t.screenshots)&&!t.localCacheExcluded);
+  const legacy=trades.filter(t=>isHydrated(t.screenshots)&&!t.localCacheExcluded);
+  legacy.forEach(t=>idbPutScreenshots(t.id,t.screenshots));
+  if(toFetch.length>0){
+    await Promise.all(toFetch.map(async t=>{
+      const full=await idbGetScreenshots(t.id);
+      if(!full)return;
+      const cur=trades.find(x=>x.id===t.id);
+      // Re-check at apply time: Drive may have already replaced `trades` with
+      // fresher, already-hydrated data while this fetch was in flight.
+      if(cur&&!isHydrated(cur.screenshots))cur.screenshots=full;
+    }));
+    render();
+  }
+}
+
+// ── Storage quota: dot indicator + auto-scrub ──────────────────────────────────
+// Tracks real origin-wide usage (localStorage + IndexedDB combined) against the
+// browser's actual quota, via navigator.storage.estimate() — not a guess at
+// localStorage's ~5-10MB ceiling, since screenshots now live in IndexedDB where
+// the real ceiling is much higher (and browser-dependent).
+let storageQuotaLevel="ok"; // "ok" | "amber" | "red" — read by render() for the dot
+let scrubbing=false;
+async function refreshStorageQuota(){
+  if(!(navigator.storage&&navigator.storage.estimate))return;
+  try{
+    const est=await navigator.storage.estimate();
+    const usage=est.usage||0,quota=est.quota||0;
+    const pct=quota>0?usage/quota:0;
+    const newLevel=pct>=0.9?"red":pct>=0.7?"amber":"ok";
+    const changed=newLevel!==storageQuotaLevel;
+    storageQuotaLevel=newLevel;
+    if(changed)render();
+    if(newLevel==="red"&&!scrubbing)autoScrubOldestScreenshots();
+  }catch(e){console.log("[quota] estimate failed:",e.message||e);}
+}
+// Evicts locally-cached screenshots oldest-first (by trade date) until usage
+// drops back under the amber line, or there's nothing left to evict. Deletes
+// the IndexedDB copy only — Drive keeps the full-res original regardless, so
+// nothing is permanently lost, just no longer cached on this device.
+async function autoScrubOldestScreenshots(){
+  if(scrubbing)return;
+  scrubbing=true;
+  let scrubbedAny=false;
+  try{
+    let guard=0;
+    while(guard++<500){
+      const est=await navigator.storage.estimate();
+      const pct=est.quota>0?(est.usage||0)/est.quota:0;
+      if(pct<0.7)break;
+      const list=trades.filter(t=>!t.localCacheExcluded&&isHydrated(t.screenshots))
+        .sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+      if(list.length===0)break; // nothing left locally to scrub
+      const t=list[0];
+      await idbDeleteScreenshots(t.id);
+      t.localCacheExcluded=true;
+      t.screenshots=(t.screenshots||[]).map(s=>({name:s.name}));
+      scrubbedAny=true;
+    }
+  }finally{
+    scrubbing=false;
+    // Only re-run persistLocal (which re-checks quota) if we actually changed
+    // something — otherwise this and refreshStorageQuota could ping-pong
+    // forever when nothing's left to scrub but usage is still over red.
+    if(scrubbedAny)persistLocal();else render();
+  }
+}
+
 // ── Google Drive sync (Phase 1) ────────────────────────────────────────────────
 // Client ID only — never a client secret (this is a public browser app; secrets
 // are for confidential server-side clients and are never needed here).
@@ -540,18 +694,8 @@ function toggleTheme(){
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 function save(){
-  try{
-    localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));
-  }catch(e){
-    alert("Storage is full — the browser's local storage limit has been hit, most likely from screenshots. Export a backup (.json), then delete a few older screenshots to free up room.");
-  }
+  persistLocal();
   driveSaveAll();
-}
-function storageInfo(){
-  let bytes=0;
-  try{bytes=new Blob([JSON.stringify({trades,reflections,dq})]).size;}catch(e){}
-  const mb=bytes/(1024*1024);
-  return{bytes,mb};
 }
 function migrateTrade(t){
   return{
@@ -587,6 +731,7 @@ function load(){
       reflections=[migrateReflection({id:Date.now(),date:td(),best:d.ref.best||"",broke:d.ref.broke||"",improve:d.ref.improve||""})];
     }
   }catch(e){}
+  hydrateScreenshotsFromIDB();
 }
 
 // ── Google Drive sync — Phase 1: connect, initial load/seed, write-through ────
@@ -1164,7 +1309,10 @@ async function driveSetPublicReadable(fileId){
   });
 }
 function driveSyncPayload(){
-  return JSON.stringify({trades,reflections,dq,lastModified:new Date().toISOString()});
+  // localCacheExcluded is a local-only caching flag (see auto-scrub above) —
+  // strip it so it doesn't leak into the Drive backup / viewer.html's data.
+  const cleanTrades=trades.map(t=>{const{localCacheExcluded,...rest}=t;return rest;});
+  return JSON.stringify({trades:cleanTrades,reflections,dq,lastModified:new Date().toISOString()});
 }
 async function driveConnectFlow(){
   driveBreakerTripped=getDriveBreakerFlag(); // pull in whatever a previous session left behind before deciding anything below
@@ -1211,7 +1359,7 @@ async function driveConnectFlow(){
       driveMirrorDirty=true;
       scheduleDriveRetry();
     }
-    try{localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));}catch(e){}
+    persistLocal();
     render();
   }catch(e){
     if(driveForceQuitted){driveForceQuitted=false;return;} // manual stop — driveForceQuit() already reset everything and rendered
@@ -1235,7 +1383,7 @@ async function driveReloadLatest(){
     if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);
     if(d.dq&&d.dq.length)dq=d.dq;
     driveKnownModifiedTime=await driveGetModifiedTime(driveAppDataFileId);
-    try{localStorage.setItem(KEY,JSON.stringify({trades,reflections,dq}));}catch(e){}
+    persistLocal();
     driveClearSyncError();
   }catch(e){
     if(driveForceQuitted){driveForceQuitted=false;return;}
@@ -2062,7 +2210,7 @@ function addTrade(){
   form=blank();showForm=false;save();render();
 }
 
-function del(id){if(!confirm("Delete this trade? This can't be undone."))return;trades=trades.filter(t=>t.id!==id);expandedIds.delete(id);save();render();}
+function del(id){if(!confirm("Delete this trade? This can't be undone."))return;trades=trades.filter(t=>t.id!==id);expandedIds.delete(id);idbDeleteScreenshots(id);save();render();}
 function setTab(t){tab=t;render();}
 function tog(){
   if(showForm)editingId=null;
@@ -2967,7 +3115,9 @@ function expExpandRowH(t){
     var lb=a===true?"⚠ Violated":a===false?"Clean":"—";
     return'<div class="explistrow"><span>'+expEsc(d.text)+'</span><span style="color:'+c+';font-weight:700">'+lb+'</span></div>';
   }).join("");
-  var shots=(t.screenshots&&t.screenshots.length>0)
+  var shots=t.localCacheExcluded
+    ?'<div class="expsub">screenshots</div><div class="dqok">not cached locally — synced to Drive, open the app to view</div>'
+    :(t.screenshots&&t.screenshots.length>0)
     ?'<div class="expsub">screenshots <span style="text-transform:none;color:var(--t3)">— click to view full size</span></div><div class="ssgallery">'+t.screenshots.map(function(sh){return'<img src="'+sh.dataUrl+'" alt="screenshot" onclick="openLB(this.src)"/>';}).join("")+'</div>'
     :'<div class="expsub">screenshots</div><div class="dqok">no screenshots attached</div>';
   return'<tr class="exprow"><td colspan="'+EXP_LOG_COLS+'"><div class="exppanel">'+
@@ -3410,14 +3560,13 @@ function render(){
   const ec=s.edge===null?"var(--t3)":s.edge>0?"var(--g)":"var(--r)";
   const bc=s.ep===null?"var(--t3)":s.ep>=.8?"var(--g)":s.ep>=.6?"var(--a)":"var(--r)";
   const em=s.ep===null?"add trades to track execution":s.ep>=.8?"great discipline 💪":s.ep>=.6?"room to improve":s.ep>0?"focus on following your rules":"follow your rules on every trade";
-  const st=storageInfo(),stCol=st.mb>4?"var(--r)":st.mb>2?"var(--a)":"var(--t3)";
   const isDark=document.documentElement.getAttribute("data-theme")==="dark";
 
   document.getElementById("app").innerHTML=`<div>
 <div class="topbar">
   <div>
     <p class="brand">J.</p>
-    <h1>trading journal</h1>
+    <h1 class="h1row">trading journal${storageQuotaLevel!=="ok"?`<span class="quotadot quotadot-${storageQuotaLevel}" title="${storageQuotaLevel==="red"?"Local storage nearly full — oldest cached screenshots are being freed up automatically (still on Drive)":"Local storage getting full"}"></span>`:""}</h1>
   </div>
   <div class="topbaracts">
     <div class="topicons">
@@ -3509,7 +3658,9 @@ function expandRowH(t){
         }).join("")}
       </div>
       <div>
-        ${t.screenshots&&t.screenshots.length>0
+        ${t.localCacheExcluded
+          ?`<div class="expsub">screenshots</div><div class="dqok">not cached locally — synced to Drive, screenshots freed up automatically to stay under your browser's storage limit</div>`
+          :t.screenshots&&t.screenshots.length>0
           ?`<div class="expsub">screenshots <span style="text-transform:none;color:var(--t3)">— click to view full size</span></div><div class="ssgallery">${t.screenshots.map(sh=>`<img src="${sh.dataUrl}" alt="screenshot" onclick="openLightbox('${sh.dataUrl.replace(/'/g,"\\'")}')"/>`).join("")}</div>`
           :`<div class="expsub">screenshots</div><div class="dqok">no screenshots attached</div>`}
       </div>
@@ -4119,6 +4270,7 @@ ${reflections.length===0
 load();
 render();
 attemptDriveAutoConnect();
+refreshStorageQuota();
 </script>
 </body>
 </html>
