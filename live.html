@@ -165,7 +165,7 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .strack{height:5px;background:var(--s2);border-radius:3px;overflow:hidden;flex:1;max-width:120px}
 .sfill{height:100%;border-radius:3px;transition:width .3s}
 /* Disqualifiers */
-.dqhead{display:flex;justify-content:space-between;align-items:center;margin:1.1rem 0 10px;padding-top:1rem;border-top:.5px solid var(--bd)}
+.dqhead{display:flex;justify-content:space-between;align-items:center;margin:0;padding:0;border:none}
 .dqedit{font-size:var(--fxs);color:var(--t3);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:2px;font-family:var(--sans)}
 .dqedit:hover{color:var(--t)}
 .dqlist{display:flex;flex-direction:column;gap:6px}
@@ -303,7 +303,11 @@ textarea:focus{border-color:var(--t3)}
 .lcbar{height:100%;border-radius:4px}
 .lcmeta{font-size:var(--fsm);font-weight:700;text-align:right;font-family:var(--sans);white-space:nowrap;flex-shrink:0}
 /* Screenshots (form upload) */
-.ssinput{font-size:var(--fsm);font-family:var(--sans);margin-bottom:10px;color:var(--t2)}
+.ssinput{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.ssupload{display:inline-flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;color:var(--t2)}
+.ssupload:hover{color:var(--t)}
+.ssupload svg{width:20px;height:20px;flex-shrink:0;display:block}
+.ssuploadnote{font-style:italic;font-weight:400;font-size:10px;color:var(--t3)}
 .ssgrid{display:flex;flex-wrap:wrap;gap:8px}
 .ssthumb{position:relative;width:88px;height:88px;border-radius:var(--rad);overflow:hidden;border:.5px solid var(--bd);background:var(--surface)}
 .ssthumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -409,7 +413,7 @@ const KEY="wss_j3";
 // ── Google Drive sync (Phase 1) ────────────────────────────────────────────────
 // Client ID only — never a client secret (this is a public browser app; secrets
 // are for confidential server-side clients and are never needed here).
-const DRIVE_CLIENT_ID="88752282122-kgd1b0kt3v9vo6vkod2d9ra3h0ta1jc8.apps.googleusercontent.com";
+const DRIVE_CLIENT_ID="54130439532-5ttumb97jg0cndsbk1krh7a1ume44nqe.apps.googleusercontent.com";
 const DRIVE_SCOPES="https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
 const DRIVE_APPDATA_NAME="journal-data.json";   // private file, lives in the invisible appDataFolder
 const DRIVE_MIRROR_NAME="journal-mirror.json";  // public "anyone with the link" copy for the mentor viewer
@@ -595,6 +599,7 @@ const ICON_FILTER=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 // Same line-icon style as every other topicon (viewBox 24x24, stroke-based, round caps/joins) —
 // classic "floppy disk" save glyph, used for the top-of-form save shortcut (see fcard header).
 const ICON_SAVE=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
+const ICON_UPLOAD=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>`;
 // item 4 — shared "DD MMM YY, HH:MM" (24hr) formatter for last-synced timestamps,
 // used in the connected-account dropdown here and (matching format, for consistency)
 // in viewer.html's last-synced text.
@@ -2120,11 +2125,12 @@ function refreshScreenshots(){
   const container=document.getElementById("ss-section");
   if(!container)return;
   container.innerHTML=`
-<div class="fsec">screenshots <span style="font-weight:400;color:var(--t3)"> — chart snapshots, auto-resized to save space</span></div>
-<input class="ssinput" type="file" accept="image/*" multiple onchange="handleScreenshotUpload(event)"/>
+<div class="fsec" style="margin:0;padding:0;border:none">screenshots <span style="font-weight:400;color:var(--t3)"> — chart snapshots</span></div>
+<label class="ssupload" for="ss-file-input">${ICON_UPLOAD}<span class="ssuploadnote">.jpeg &amp; .png only</span></label>
+<input id="ss-file-input" class="ssinput" type="file" accept="image/jpeg,image/png" multiple onchange="handleScreenshotUpload(event)"/>
 ${form.screenshots.length>0
   ?`<div class="ssgrid">${form.screenshots.map((s,i)=>`<div class="ssthumb"><img src="${s.dataUrl}" alt="screenshot"/><button class="ssdel" onclick="removeScreenshot(${i})">×</button></div>`).join("")}</div>`
-  :`<div class="dqok">no screenshots attached</div>`}`;
+  :``}`;
 }
 
 function sr(id,val){form.ra[id]=form.ra[id]===val?null:val;refreshRules();}
@@ -2197,7 +2203,7 @@ function fillsSectionHtml(){
       </div>
     </div>`;
   }).join("");
-  return`${rows}<button type="button" class="btn" onclick="addFillRow()">+ add fill (scaled in/out)</button><div id="fills-summary" class="fillsummary"></div>`;
+  return`${rows}<div id="fills-summary" class="fillsummary"></div>`;
 }
 function renderFillsSection(){
   const c=document.getElementById("fills-section");
@@ -3163,7 +3169,7 @@ function refreshRules(){
   const col=sc(score);
 
   container.innerHTML=`
-<div class="fsec">rules checklist <span style="font-weight:400;color:var(--t3)"> — tap yes / no for each</span></div>
+<div class="fsec" style="margin:0;padding:0;border:none">rules checklist <span style="font-weight:400;color:var(--t3)"> — tap yes / no for each</span></div>
 <div class="rgrid">
 ${RULES.map(rule=>{
   const a=ra[rule.id];
@@ -3729,7 +3735,10 @@ ${showForm?`
       <label>exit date</label><input id="fi-exitdate" type="date" value="${form.exitDate||form.date}"/>
     </div>
   </div>
-  <div class="fsec" style="margin-top:1.1rem">fills <span style="font-weight:400;color:var(--t3);text-transform:none;letter-spacing:normal"> — log each add/entry or exit/reduce; contracts, avg price, and $ result roll up automatically. New fills copy the previous one's values — edit whatever changed.</span></div>
+  <div class="fsec" style="margin-top:1.1rem;display:flex;justify-content:space-between;align-items:center;gap:12px">
+    <span>fills <span style="font-weight:400;color:var(--t3);text-transform:none;letter-spacing:normal"> — log each add/entry or exit/reduce; contracts, avg price, and $ result roll up automatically.</span></span>
+    <button type="button" class="topicon" onclick="addFillRow()" aria-label="add fill (scaled in/out)" data-tt="add fill (scaled in/out)" style="flex-shrink:0">${ICON_PLUS}</button>
+  </div>
   <div id="fills-section"></div>
   <div class="fgrid" style="margin-top:10px">
     <div class="field">
@@ -3747,9 +3756,9 @@ ${showForm?`
     </div>
   </div>
   <div id="risk-preview"></div>
-  <div id="rules-section"></div>
-  <div id="dq-section" style="margin-top:1.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
-  <div id="ss-section" style="margin-top:1.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
+  <div id="rules-section" style="margin-top:2.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
+  <div id="dq-section" style="margin-top:2.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
+  <div id="ss-section" style="margin-top:2.1rem;padding-top:1rem;border-top:.5px solid var(--bd)"></div>
   <div class="fsec">comments <span style="font-weight:400;color:var(--t3)"> — anything else worth remembering about this trade</span></div>
   <textarea id="fi-comments" rows="3" placeholder="e.g. news catalyst, how it felt, what you'd do differently...">${form.comments}</textarea>
   <div style="margin-top:2px">
