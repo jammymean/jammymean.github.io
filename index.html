@@ -5,7 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>trading journal</title>
 <link rel="icon" id="favicon" type="image/svg+xml" href=""/>
-<script>(function(){try{var t=localStorage.getItem("wss_theme")||"dark";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();</script>
+<script>(function(){
+  // Set the theme AND the favicon synchronously, before the rest of the page's
+  // script runs. When this file is served as index.html at a site's root (e.g.
+  // "user.github.io/"), some browsers auto-request "/favicon.ico" and cache a
+  // blank result for that origin if the <link> tag's icon isn't already in
+  // place by the time they look for one; setting it here, immediately, as the
+  // very first thing that runs — instead of waiting for setFavicon() near the
+  // bottom of the full script — closes that gap. (The link tag has to be set
+  // twice: this early pass covers the moment the browser first paints the tab,
+  // and setFavicon() later keeps it in sync with in-app theme toggles.)
+  var t;try{t=localStorage.getItem("wss_theme")||"dark";}catch(e){t="dark";}
+  document.documentElement.setAttribute("data-theme",t);
+  var color=t==="dark"?"#B0E0E6":"#4682B4";
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>';
+  var link=document.getElementById("favicon");
+  if(link)link.href="data:image/svg+xml,"+encodeURIComponent(svg);
+})();</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -22,6 +38,7 @@
   --tablr:#4F7691;--tablrbg:rgba(79,118,145,0.12);--tablrbd:rgba(79,118,145,0.32);
   --mv:#B3677E;--mvbg:rgba(179,103,126,0.12);--mvbd:rgba(179,103,126,0.30);
   --pbsel:#A47DAB;--pbselbg:rgba(164,125,171,0.14);--pbselbd:rgba(164,125,171,0.34);
+  --tabdashbg-dd:#ECDEE4;--tablrbg-dd:#DCE4E9;
   --rad:8px;--radl:12px;
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
   --mono:var(--sans);
@@ -48,6 +65,7 @@
   --tablr:#E0AFC2;--tablrbg:rgba(224,175,194,0.15);--tablrbd:rgba(224,175,194,0.35);
   --mv:#D9A0B4;--mvbg:rgba(217,160,180,0.14);--mvbd:rgba(217,160,180,0.32);
   --pbsel:#EDC8FF;--pbselbg:rgba(237,200,255,0.15);--pbselbd:rgba(237,200,255,0.35);
+  --tabdashbg-dd:#373D44;--tablrbg-dd:#423942;
 }
 body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height:100vh;font-size:var(--fbase)}
 .readonly-mode [data-edit]{display:none!important}
@@ -68,6 +86,16 @@ h1{font-size:var(--fh1);font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
 .themetoggle{width:32px;height:32px;border:none;background:none;color:#ffbf00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .themetoggle:hover{opacity:.75}
 .themetoggle svg{width:18px;height:18px;display:block}
+/* Fast custom tooltip — shows immediately on hover via CSS rather than relying on
+   the native title attribute, whose browser-controlled delay made it feel like it
+   only worked "sometimes". aria-label is kept alongside data-tt as an accessible
+   fallback (screen readers only — it renders no visual popup of its own), so this
+   is the only visible tooltip; colored to match the dashboard/connected-icon
+   mauve (light) / powder-blue (dark) overlay instead of a plain black/white box. */
+[data-tt]{position:relative}
+[data-tt]::after{content:attr(data-tt);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--tabdashbg);color:var(--tabdash);border:.5px solid var(--tabdashbd);font-size:11px;font-weight:500;line-height:1.3;padding:5px 9px;border-radius:6px;white-space:normal;width:max-content;max-width:240px;text-align:center;opacity:0;pointer-events:none;transition:opacity .1s;z-index:80;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+[data-tt]:hover::after{opacity:1;transition-delay:.15s}
+body.tt-blurred [data-tt]::after{opacity:0!important}
 .banner{background:var(--s2);border:.5px solid var(--bd);border-radius:var(--radl);padding:10px 14px;margin-bottom:.9rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:var(--fbase);color:var(--t2)}
 .banner strong{color:var(--t)}
 .bacts{display:flex;gap:6px;flex-wrap:wrap}
@@ -308,16 +336,19 @@ textarea:focus{border-color:var(--t3)}
 .filterbtn:hover{color:var(--t)}
 .filterbtn.on{color:var(--tablr);background:var(--tablrbg);border-color:var(--tablrbd)}
 .filterdd-wrap{position:relative;display:inline-flex}
-.filterdd{position:absolute;top:30px;left:0;min-width:140px;background:var(--tablrbg);border:.5px solid var(--tablrbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;z-index:50;text-align:left;cursor:default}
-.filterdd-row{display:block;width:100%;text-align:left;padding:6px 12px;background:none;border:none;font-size:var(--fsm);color:var(--t);cursor:pointer;font-family:var(--sans)}
+.filterdd{position:absolute;top:30px;left:0;min-width:140px;width:max-content;max-width:280px;background:var(--tablrbg-dd);border:.5px solid var(--tablrbd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;z-index:50;text-align:left;cursor:default}
+.filterdd-row{display:block;width:100%;text-align:left;padding:6px 12px;background:none;border:none;font-size:var(--fsm);color:var(--t);cursor:pointer;font-family:var(--sans);white-space:nowrap}
 .filterdd-row:hover{background:var(--tablrbd)}
-.filterdd-check{display:flex;align-items:center;gap:8px;cursor:pointer}
-.filterdd-check input{cursor:pointer;accent-color:var(--tablr)}
+.filterdd-check{display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap}
+.filterdd-check input{cursor:pointer;accent-color:var(--tablr);flex-shrink:0}
+.filterdd-label{flex:1}
+.filterdd-count{margin-left:auto;flex-shrink:0;color:var(--t3)}
 .filterclear{height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:none;border:none;padding:0;color:var(--t2);flex-shrink:0}
 .filterclear:hover{color:var(--t)}
 .filterclear svg{width:14px;height:14px;display:block}
+.iconsep{color:var(--bdm);user-select:none;font-size:13px;line-height:1}
 .logbaricons{display:inline-flex;align-items:center;gap:9px;margin-left:auto}
-.searchwrap{display:inline-flex;align-items:center}
+.searchwrap{display:inline-flex;align-items:center;gap:6px}
 .searchpill{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:3px 7px;border:.5px solid var(--tabdashbd);background:var(--tabdashbg);color:var(--tabdash)}
 .searchpill svg{width:14px;height:14px;flex-shrink:0}
 .searchpill input{background:none;border:none;outline:none;font-family:var(--sans);font-size:var(--fbase);color:var(--t);width:130px}
@@ -353,6 +384,7 @@ const ICON_PLUS=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const ICON_TRIRIGHT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M9 6l9 6-9 6V6z"/></svg>`;
 const ICON_TRILEFT=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M15 6l-9 6 9 6V6z"/></svg>`;
 const ICON_TRIDOWN=`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M6 9l6 9 6-9H6z"/></svg>`;
+const ICON_FILTER=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 4 20 4 14 12.5 14 19 10 21 10 12.5 4 4"/></svg>`;
 const RULES=[
   {id:"stop", text:"Respected my stop loss"},
   {id:"fomo", text:"Entered on conviction, not FOMO"},
@@ -2456,7 +2488,7 @@ function render(){
 <div class="topbar">
   <div>
     <p class="brand">J.</p>
-    <h1>trading journal<span class="robadge" title="read-only">${ICON_NOEDIT}</span></h1>
+    <h1>trading journal<span class="robadge" aria-label="read-only" data-tt="read-only">${ICON_NOEDIT}</span></h1>
     <p class="sub" style="margin-bottom:0"><span style="font-weight:300;font-size:var(--fsm);font-style:italic">last synced: ${fmtSyncTime(driveModifiedTime)}</span></p>
     ${driveStaleBanner?`<p style="margin:4px 0 0;font-size:var(--fxs);color:var(--a)">⚠ ${driveStaleBanner}</p>`:""}
   </div>
@@ -2464,8 +2496,8 @@ function render(){
     <div class="bacts bacts-slim">
       <button class="btn" data-edit="1" onclick="impData()">↑ import</button>
     </div>
-    <button class="topicon" onclick="openExportOptions()" title="share summary (.html)">${ICON_DOWN}</button>
-    <button class="themetoggle" onclick="toggleTheme()" title="toggle theme">${isDark?ICON_SUN:ICON_MOON}</button>
+    <button class="topicon" onclick="openExportOptions()" aria-label="share summary (.html)" data-tt="share summary (.html)">${ICON_DOWN}</button>
+    <button class="themetoggle" onclick="toggleTheme()" aria-label="${isDark?"switch to light mode":"switch to dark mode"}" data-tt="${isDark?"switch to light mode":"switch to dark mode"}">${isDark?ICON_SUN:ICON_MOON}</button>
   </div>
 </div>
 <div class="tabs">
@@ -2579,7 +2611,34 @@ function clearOneLogFilter(key,ev){
 }
 function closeLogFilterDropdown(){if(logFilterOpen){logFilterOpen=null;render();}}
 document.addEventListener("click",()=>{if(logFilterOpen)closeLogFilterDropdown();if(logSearchOpen&&!logSearchLocked)closeLogSearch();if(refSearchOpen&&!refSearchLocked)closeRefSearch();});
-function renderFilterBtn(key,allLabel,opts){
+// [data-tt] tooltip the moment the window loses focus (e.g. clicking into another
+// tab/app while the pointer is still sitting on an icon) so it never gets stuck
+// floating over whatever comes next; :hover retakes over on refocus.
+window.addEventListener("blur",()=>{document.body.classList.add("tt-blurred");});
+window.addEventListener("focus",()=>{document.body.classList.remove("tt-blurred");});
+function countForFilterOption(key,val,list){
+  return list.filter(t=>{
+    if(key!=="ticker"&&logFilters.ticker.length&&!logFilters.ticker.includes((t.ticker||"").toUpperCase()))return false;
+    if(key!=="setup"&&logFilters.setup.length&&!logFilters.setup.includes(t.setup))return false;
+    if(key!=="wl"&&logFilters.wl.length&&!logFilters.wl.includes(t.wl))return false;
+    if(key!=="process"&&logFilters.process.length){
+      if(t.isGood===null||t.isGood===undefined)return false;
+      const procVal=t.isGood?"good":"bad";
+      if(!logFilters.process.includes(procVal))return false;
+    }
+    if(key!=="lossCat"&&logFilters.lossCat.length&&!logFilters.lossCat.includes(t.lossCat))return false;
+    if(!logSearchMatch(t))return false;
+    switch(key){
+      case"ticker":return(t.ticker||"").toUpperCase()===val;
+      case"setup":return t.setup===val;
+      case"wl":return t.wl===val;
+      case"process":return t.isGood!==null&&t.isGood!==undefined&&(t.isGood?"good":"bad")===val;
+      case"lossCat":return t.lossCat===val;
+      default:return false;
+    }
+  }).length;
+}
+function renderFilterBtn(key,allLabel,opts,list){
   const cur=logFilters[key];
   const open=logFilterOpen===key;
   let curLabel=allLabel;
@@ -2591,10 +2650,10 @@ function renderFilterBtn(key,allLabel,opts){
     curLabel=`${match?match.label:cur[0]} +${cur.length-1}`;
   }
   return`<div class="filterdd-wrap">
-    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" title="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
+    <button class="filterbtn${(cur.length>0||open)?" on":""}" onclick="toggleLogFilterDropdown('${key}',event)" aria-label="filter by ${allLabel.replace('all ',"")}" data-tt="filter by ${allLabel.replace('all ',"")}">${esc(curLabel)}</button>
     ${open?`<div class="filterdd" onclick="event.stopPropagation()">
       <button class="filterdd-row" onclick="clearOneLogFilter('${key}',event)">${allLabel}</button>
-      ${opts.map(o=>`<label class="filterdd-row filterdd-check"><input type="checkbox" ${cur.includes(o.val)?"checked":""} onchange="toggleLogFilterValue('${key}','${o.val}',event)"/>${esc(o.label)}</label>`).join("")}
+      ${opts.map(o=>`<label class="filterdd-row filterdd-check"><input type="checkbox" ${cur.includes(o.val)?"checked":""} onchange="toggleLogFilterValue('${key}','${o.val}',event)"/><span class="filterdd-label">${esc(o.label)}</span><span class="filterdd-count">(${list?countForFilterOption(key,o.val,list):0})</span></label>`).join("")}
     </div>`:""}
   </div>`;
 }
@@ -2723,25 +2782,26 @@ function logH(en){
   }).join("");
   return`<div>
 ${trades.length>0?`<div class="logfilterbar">
-  <button class="topicon" onclick="toggleExpandAll()" aria-label="${anyExpanded?"collapse all":"expand all"}" title="${anyExpanded?"collapse all":"expand all"}">${anyExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
-  ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})))}
+  <button class="topicon" onclick="toggleExpandAll()" aria-label="${anyExpanded?"collapse all":"expand all"}" data-tt="${anyExpanded?"collapse all":"expand all"}">${anyExpanded?ICON_TRIDOWN:ICON_TRIRIGHT}</button>
+  <span class="topicon" style="cursor:default;margin-right:-4px" aria-label="filters">${ICON_FILTER}</span>
+  ${renderFilterBtn("ticker","all tickers",uniqueTickersUsed().map(tk=>({val:tk,label:tk})),en)}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})))}
+  ${renderFilterBtn("setup","all setups",SETUPS.map(s=>({val:s,label:s})),en)}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("wl","all W/L",[{val:"Win",label:"Win"},{val:"Loss",label:"Loss"},{val:"BE",label:"Breakeven"}])}
+  ${renderFilterBtn("wl","all W/L",[{val:"Win",label:"Win"},{val:"Loss",label:"Loss"},{val:"BE",label:"Breakeven"}],en)}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}])}
+  ${renderFilterBtn("process","all process",[{val:"good",label:"Good"},{val:"bad",label:"Bad"}],en)}
   <span class="iconsep">|</span>
-  ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})))}
-  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" title="clear filters">${ICON_X}</button>`:""}
+  ${renderFilterBtn("lossCat","all loss types",LOSSCATS.map(c=>({val:c.id,label:c.label})),en)}
+  ${filtersOn?`<button class="filterclear" onclick="clearLogFilters()" aria-label="clear all filters" data-tt="clear all filters">${ICON_X}</button>`:""}
   <div class="logbaricons">
     <span class="searchwrap">
       ${logSearchOpen&&currentLogSearchMatches().length>0?`
-      <button class="topicon" onclick="logSearchNav(-1,event)" aria-label="previous match" title="previous match">${ICON_TRILEFT}</button>
-      <button class="topicon" onclick="logSearchNav(1,event)" aria-label="next match" title="next match">${ICON_TRIRIGHT}</button>
+      <button class="topicon" onclick="logSearchNav(-1,event)" aria-label="previous match" data-tt="previous match">${ICON_TRILEFT}</button>
+      <button class="topicon" onclick="logSearchNav(1,event)" aria-label="next match" data-tt="next match">${ICON_TRIRIGHT}</button>
       `:""}
       ${logSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="logsearch-input" placeholder="search trades..." value="${escAttr(logSearchQuery)}" oninput="onLogSearchInput(this)" onkeydown="onLogSearchKeydown(event)"/></span>`
-      :`<button class="topicon" onclick="toggleLogSearch(event)" title="search trades">${ICON_SEARCH}</button>`}
+      :`<button class="topicon" onclick="toggleLogSearch(event)" aria-label="search trades" data-tt="search trades">${ICON_SEARCH}</button>`}
     </span>
     <span class="iconsep" data-edit="1">|</span>
     <button class="topicon" data-edit="1" onclick="tog()" title="${showForm?"cancel":"add trade"}">${showForm?ICON_X:ICON_PLUS}</button>
@@ -3059,7 +3119,7 @@ function reflectionH(){
   <div class="logbaricons">
     <span class="searchwrap">
       ${refSearchOpen?`<span class="searchpill" onclick="event.stopPropagation()">${ICON_SEARCH}<input id="refsearch-input" placeholder="" value="${escAttr(refSearchQuery)}" oninput="onRefSearchInput(this)" onkeydown="onRefSearchKeydown(event)"/></span>`
-      :`<button class="topicon" onclick="toggleRefSearch(event)" aria-label="search reflections" title="search reflections">${ICON_SEARCH}</button>`}
+      :`<button class="topicon" onclick="toggleRefSearch(event)" aria-label="search reflections" data-tt="search reflections">${ICON_SEARCH}</button>`}
     </span>
     <span class="iconsep" data-edit="1">|</span>
     <button class="topicon" data-edit="1" onclick="toggleRefForm()" aria-label="${showRefForm?"cancel":"add reflection"}" title="${showRefForm?"cancel":"add reflection"}">${showRefForm?ICON_X:ICON_PLUS}</button>
