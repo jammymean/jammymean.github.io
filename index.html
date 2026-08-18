@@ -17,9 +17,8 @@
   // and setFavicon() later keeps it in sync with in-app theme toggles.)
   var t;try{t=localStorage.getItem("wss_theme")||"dark";}catch(e){t="dark";}
   document.documentElement.setAttribute("data-theme",t);
-  var bg=t==="dark"?"#121214":"#F7F6F3";
   var color=t==="dark"?"#B0E0E6":"#4682B4";
-  var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="'+bg+'"/><g transform="translate(4,4)"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="3" x2="21" y2="21" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg>';
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>';
   var link=document.getElementById("favicon");
   if(link)link.href="data:image/svg+xml,"+encodeURIComponent(svg);
 })();</script>
@@ -485,17 +484,11 @@ function td(){return new Date().toISOString().split("T")[0]}
 // ── Theme ─────────────────────────────────────────────────────────────────────
 // Favicon reuses the same crossed-out-pencil shape as the read-only badge
 // (ICON_NOEDIT), just recolored per-theme since favicons can't use CSS
-// variables — powder blue on dark, steel blue on light. Wrapped in an opaque
-// circle backdrop (theme's own bg color) so nothing renders on a transparent
-// canvas — browsers/launchers that show favicons in tiles otherwise substitute
-// their own default backdrop (often a flat dark chip) behind transparent pixels,
-// which looked wrong regardless of the page's actual theme.
+// variables — powder blue on dark, steel blue on light.
 function setFavicon(){
   const isDark=document.documentElement.getAttribute("data-theme")==="dark";
-  const bg=isDark?"#121214":"#F7F6F3";
   const color=isDark?"#B0E0E6":"#4682B4";
-  const inner=ICON_NOEDIT.replace(/currentColor/g,color).replace("<svg ",'<svg xmlns="http://www.w3.org/2000/svg" ');
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="${bg}"/><svg x="4" y="4" width="24" height="24">${inner}</svg></svg>`;
+  const svg=ICON_NOEDIT.replace(/currentColor/g,color).replace("<svg ",'<svg xmlns="http://www.w3.org/2000/svg" ');
   const link=document.getElementById("favicon");
   if(link)link.href=`data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
