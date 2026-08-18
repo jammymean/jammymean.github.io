@@ -384,8 +384,16 @@ const MON=["January","February","March","April","May","June","July","August","Se
 const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const KEY="wss_j3";
 // ── Read-only viewer config ──────────────────────────────────────────────────
-const DRIVE_FILE_ID="13X7JYIoE1jtw0nXPCGm2E5HNNU4hpegS";
-const DRIVE_API_KEY="AIzaSyDCzIUWr7pADkVu1gWtZbCQbv25Q5ko8SY";
+// The mirror file's own Drive file ID is intentionally NOT hardcoded here —
+// that's what caused the earlier "Drive fetch failed: 404" bug (journal.html
+// can end up minting a new mirror file with a new ID, orphaning any ID baked
+// in here). Instead we resolve it at load time by listing the contents of a
+// single public folder, and cache the last-known-good ID + payload in
+// localStorage as a fallback. See loadFromDrive() below for the full chain.
+const DRIVE_MIRROR_FOLDER_ID="1i83EzhhOFU1AgPipttXtSj-rDYcViFOr";
+const DRIVE_MIRROR_NAME="journal-mirror.json";
+const DRIVE_API_KEY="AIzaSyCp3Hy2C8dvMkSlaLC_8Czw0QbnL1AMey8";
+const DRIVE_CACHE_KEY="wss_drive_cache"; // last successful {fileId,data,modifiedTime,cachedAt}
 
 // Futures contract specs — $/point drives leveraged risk/reward math.
 const TICKERS=[
@@ -2450,6 +2458,7 @@ function render(){
     <p class="brand">J.</p>
     <h1>trading journal<span class="robadge" title="read-only">${ICON_NOEDIT}</span></h1>
     <p class="sub" style="margin-bottom:0"><span style="font-weight:300;font-size:var(--fsm);font-style:italic">last synced: ${fmtSyncTime(driveModifiedTime)}</span></p>
+    ${driveStaleBanner?`<p style="margin:4px 0 0;font-size:var(--fxs);color:var(--a)">⚠ ${driveStaleBanner}</p>`:""}
   </div>
   <div class="topbaracts">
     <div class="bacts bacts-slim">
@@ -3114,32 +3123,96 @@ ${reflections.length===0
 </div>`;
 }
 
-// ── Boot (read-only: load from the shared Google Drive file) ───────────────────
-let driveModifiedTime=null; // item 8 — Drive's own modifiedTime for the mirror file, shown as "last synced"
-async function loadFromDrive(){
-  // item 5 — replaces the earlier generic loading text with a thin, small,
-  // italic "loading viewer journal..." (deferred the original loading-skeleton
-  // ask; this is the smaller replacement that was scoped in instead).
-  document.getElementById("app").innerHTML=`<div style="padding:3rem;text-align:center;color:var(--t2);font-weight:300;font-size:var(--fsm);font-style:italic">loading viewer journal...</div>`;
+// ── Boot (read-only: load from the shared Google Drive mirror) ─────────────────
+let driveModifiedTime=null;  // Drive's own modifiedTime for the mirror file, shown as "last synced"
+let driveStaleBanner="";     // set when we're showing a cached copy instead of a fresh Drive fetch
+
+function loadDriveCache(){
   try{
-    const contentUrl=`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?alt=media&key=${DRIVE_API_KEY}`;
-    const metaUrl=`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?fields=modifiedTime&key=${DRIVE_API_KEY}`;
-    const [contentRes,metaRes]=await Promise.all([fetch(contentUrl),fetch(metaUrl)]);
-    if(!contentRes.ok)throw new Error("Drive fetch failed: "+contentRes.status);
-    const d=await contentRes.json();
-    if(Array.isArray(d.trades))trades=d.trades.map(migrateTrade);
-    if(d.dq&&d.dq.length)dq=d.dq;
-    if(Array.isArray(d.reflections))reflections=d.reflections.map(migrateReflection);
-    // item 8 — non-fatal if this one fails; the journal content is what matters,
-    // "last synced" just falls back to "—" via fmtSyncTime(null) if it's missing.
-    if(metaRes.ok){
-      const meta=await metaRes.json();
-      driveModifiedTime=meta.modifiedTime||null;
+    const raw=localStorage.getItem(DRIVE_CACHE_KEY);
+    return raw?JSON.parse(raw):null;
+  }catch(e){return null;}
+}
+function saveDriveCache(fileId,data,modifiedTime){
+  try{
+    localStorage.setItem(DRIVE_CACHE_KEY,JSON.stringify({fileId,data,modifiedTime,cachedAt:new Date().toISOString()}));
+  }catch(e){} // best-effort — a full/blocked localStorage just means no fallback next time, nothing fatal now
+}
+// Bug-2 fix: resolve the mirror's *current* file ID by listing the one public
+// folder it's kept in, instead of trusting a hardcoded ID that can silently
+// go stale if journal.html ever recreates the mirror.
+async function resolveMirrorFileId(){
+  const q=`'${DRIVE_MIRROR_FOLDER_ID}' in parents and name='${DRIVE_MIRROR_NAME}' and trashed=false`;
+  const url=`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,modifiedTime)&key=${DRIVE_API_KEY}`;
+  const res=await fetch(url);
+  if(!res.ok)throw new Error("folder lookup failed: "+res.status);
+  const d=await res.json();
+  if(!d.files||!d.files.length)throw new Error("mirror file not found in shared folder");
+  return d.files[0]; // {id, modifiedTime}
+}
+async function fetchMirrorContent(fileId){
+  const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${DRIVE_API_KEY}`);
+  if(!res.ok)throw new Error("Drive fetch failed: "+res.status);
+  return res.json();
+}
+async function fetchMirrorModifiedTime(fileId){
+  try{
+    const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=modifiedTime&key=${DRIVE_API_KEY}`);
+    if(!res.ok)return null;
+    const meta=await res.json();
+    return meta.modifiedTime||null;
+  }catch(e){return null;} // non-fatal — "last synced" just falls back to "—"
+}
+
+async function loadFromDrive(){
+  document.getElementById("app").innerHTML=`<div style="padding:3rem;text-align:center;color:var(--t2);font-weight:300;font-size:var(--fsm);font-style:italic">loading viewer journal...</div>`;
+  const cache=loadDriveCache();
+  let resolvedId=null,data=null,modifiedTime=null,usedFallback=false;
+
+  // Tier 1 — normal path: resolve the current file ID via the public folder, fetch fresh
+  try{
+    const found=await resolveMirrorFileId();
+    resolvedId=found.id;
+    data=await fetchMirrorContent(resolvedId);
+    modifiedTime=found.modifiedTime||await fetchMirrorModifiedTime(resolvedId);
+  }catch(e1){
+    console.log("[drive] folder lookup failed, trying last-known file id:",e1.message||e1);
+    // Tier 2 — folder lookup itself failed (network blip, folder unshared, quota):
+    // try the last file ID we successfully resolved before, direct
+    if(cache&&cache.fileId){
+      try{
+        data=await fetchMirrorContent(cache.fileId);
+        resolvedId=cache.fileId;
+        modifiedTime=await fetchMirrorModifiedTime(cache.fileId);
+      }catch(e2){
+        console.log("[drive] last-known file id fetch also failed:",e2.message||e2);
+      }
     }
-  }catch(e){
-    document.getElementById("app").innerHTML=`<div style="padding:3rem;text-align:center;color:var(--r)">Couldn't load the shared journal right now.<br/><span style="color:var(--t3);font-size:var(--fsm)">${e.message||e}</span></div>`;
+  }
+
+  if(!data&&cache&&cache.data){
+    // Tier 3 — nothing live worked at all: fall back to the last cached payload
+    data=cache.data;
+    modifiedTime=cache.modifiedTime||null;
+    usedFallback=true;
+    driveStaleBanner=`showing data as of ${fmtSyncTime(cache.cachedAt)} — couldn't refresh from Drive.`;
+  }else{
+    driveStaleBanner="";
+  }
+
+  if(!data){
+    // Tier 4 — nothing live, no cache either
+    document.getElementById("app").innerHTML=`<div style="padding:3rem;text-align:center;color:var(--r)">Couldn't load the shared journal right now.<br/><span style="color:var(--t3);font-size:var(--fsm)">No cached copy is available on this device yet — try again shortly.</span></div>`;
     return;
   }
+
+  if(Array.isArray(data.trades))trades=data.trades.map(migrateTrade);
+  if(data.dq&&data.dq.length)dq=data.dq;
+  if(Array.isArray(data.reflections))reflections=data.reflections.map(migrateReflection);
+  driveModifiedTime=modifiedTime;
+
+  if(!usedFallback&&resolvedId)saveDriveCache(resolvedId,data,modifiedTime); // only refresh the cache on a genuinely fresh load
+
   document.body.classList.add("readonly-mode");
   render();
 }
