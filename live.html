@@ -670,6 +670,20 @@ function sortedTickers(){
 }
 function tickerInfo(symbol){return TICKERS.find(t=>t.symbol===symbol)||null;}
 
+// ── Fees ──────────────────────────────────────────────────────────────────────
+// Two separate legs, both purely a trade-log data-entry concern — they only
+// ever feed into the per-trade `result` figure (see recomputeAutoResult()); no
+// dashboard/stat function reads either fee field directly, so P&L everywhere
+// downstream (dashboard, equity curve, exports) already comes out net without
+// needing separate wiring.
+//   · non-variable: commission + NFA fee + clearing fee, combined into one flat
+//     per-contract rate that's the same no matter what's traded.
+//   · variable: the exchange fee, which genuinely differs by instrument since
+//     futures list on different exchanges — kept as a plain manual field except
+//     for the couple of tickers with a known rate so far.
+const FEE_FIXED_PER_CONTRACT=0.60; // commission + NFA + clearing, combined, $/contract
+const FEE_VARIABLE_DEFAULTS={MNQ:0.35, MGC:0.60}; // $/contract exchange fee — add more as they're confirmed
+
 let trades=[],reflections=[],dq=DQ_DEFAULT.map(d=>({...d})),tab="dashboard",showForm=false,editingDq=false,editingId=null,showRefForm=false,expandedIds=new Set();
 let periodMode="week",periodAnchor=new Date(),customFrom="",customTo="";
 let logSort={col:"date",dir:"desc"};
@@ -689,6 +703,8 @@ let refSearchNavIndex=-1; // index of the currently-focused match, for prev/next
 let refSearchCurrentId=null; // id of the reflection the nav arrows are currently parked on (see logSearchCurrentId)
 let calendarCollapsed=false; // dashboard's calendar section collapse state
 let resultManual=false;
+let feeFixedManual=false;    // true once the person types directly into the non-variable fee field
+let feeVariableManual=false; // true once the person types directly into the variable (exchange) fee field
 let fillSeq=1;
 
 // form state — kept separate so inputs are never re-rendered while typing
@@ -699,8 +715,9 @@ function blank(){
   const dqa={};dq.forEach(d=>dqa[d.id]=false);
   const first=sortedTickers()[0];
   resultManual=false;
+  feeFixedManual=false;feeVariableManual=false;
   fillSeq=2;
-  return{date:td(),entryTime:"10:00",exitTime:"10:00",multiDay:false,exitDate:"",ticker:first?first.symbol:"",setup:"Bounce",direction:"long",contracts:"1",entry:"",stop:"",target:"",exit:"",result:"",lossCat:"",comments:"",screenshots:[],
+  return{date:td(),entryTime:"10:00",exitTime:"10:00",multiDay:false,exitDate:"",ticker:first?first.symbol:"",setup:"Bounce",direction:"long",contracts:"1",entry:"",stop:"",target:"",exit:"",result:"",feeFixed:"",feeVariable:"",lossCat:"",comments:"",screenshots:[],
     fills:[{id:1,type:"add",price:"",contracts:"1",stop:"",target:""},{id:2,type:"exit",price:"",contracts:"1",stop:"",target:""}],
     ra,dqa};
 }
@@ -728,7 +745,9 @@ function migrateTrade(t){
     direction: t.direction||"long",
     multiDay: !!t.multiDay,
     exitDate: t.exitDate||"",
-    exit: t.exit!==undefined?t.exit:""
+    exit: t.exit!==undefined?t.exit:"",
+    feeFixed: t.feeFixed!==undefined?t.feeFixed:"",
+    feeVariable: t.feeVariable!==undefined?t.feeVariable:""
   };
 }
 function migrateReflection(r){
@@ -2211,6 +2230,8 @@ function addTrade(){
   form.target=s.target||"";
   form.exit=s.closedContracts>0&&!isNaN(s.weightedExit)?String(s.weightedExit):"";
   const resEl=document.getElementById("fi-result");if(resEl)form.result=resEl.value;
+  const feeFixedEl=document.getElementById("fi-fee-fixed");if(feeFixedEl)form.feeFixed=feeFixedEl.value;
+  const feeVarEl=document.getElementById("fi-fee-variable");if(feeVarEl)form.feeVariable=feeVarEl.value;
   const lcEl=document.getElementById("fi-losscat");if(lcEl)form.lossCat=lcEl.value;
   const cmEl=document.getElementById("fi-comments");if(cmEl)form.comments=cmEl.value;
   if(!form.ticker||!form.entry){
@@ -2251,8 +2272,9 @@ function editTrade(id){
     if(t.exit){fills.push({id:2,type:"exit",price:t.exit,contracts:t.contracts||"1",stop:"",target:""});}
   }
   fillSeq=fills.reduce((m,f)=>Math.max(m,f.id),0);
-  form={...t,ra:{...t.ra},dqa:{...t.dqa},screenshots:[...(t.screenshots||[])],direction:t.direction||"long",multiDay:!!t.multiDay,exitDate:t.exitDate||"",entryTime:t.entryTime||"10:00",exitTime:t.exitTime||"10:00",exit:t.exit||"",fills};
+  form={...t,ra:{...t.ra},dqa:{...t.dqa},screenshots:[...(t.screenshots||[])],direction:t.direction||"long",multiDay:!!t.multiDay,exitDate:t.exitDate||"",entryTime:t.entryTime||"10:00",exitTime:t.exitTime||"10:00",exit:t.exit||"",feeFixed:t.feeFixed||"",feeVariable:t.feeVariable||"",fills};
   resultManual=false;
+  feeFixedManual=false;feeVariableManual=false;
   editingId=id;showForm=true;
   window.scrollTo({top:0,behavior:"smooth"});
   render();
@@ -2445,10 +2467,36 @@ function applySetupDefault(){
   if(setupEl.value==="Bounce")dirEl.value="long";
   else if(setupEl.value==="Reject")dirEl.value="short";
   // "Break" has no default direction — leave whatever is currently selected
-  refreshRiskPreview();
   recomputeAutoResult();
+  refreshRiskPreview();
 }
 function markResultManual(){resultManual=true;}
+
+// ── Fees — non-variable (flat, per-contract) + variable (ticker-specific exchange fee) ─
+// Both auto-fill from position size on every fill/ticker change below, unless the
+// person has typed directly into that specific field (tracked separately per leg,
+// same override pattern as result/resultManual above).
+function markFeeFixedManual(){feeFixedManual=true;recomputeAutoResult();}
+function markFeeVariableManual(){feeVariableManual=true;recomputeAutoResult();}
+function recomputeFees(totalContracts){
+  const fixedEl=document.getElementById("fi-fee-fixed");
+  if(fixedEl&&!feeFixedManual){
+    fixedEl.value=totalContracts>0?(FEE_FIXED_PER_CONTRACT*totalContracts).toFixed(2):"";
+  }
+  const varEl=document.getElementById("fi-fee-variable");
+  if(varEl&&!feeVariableManual){
+    const tkEl=document.getElementById("fi-ticker");
+    const perContract=tkEl?FEE_VARIABLE_DEFAULTS[tkEl.value]:undefined;
+    varEl.value=(perContract!==undefined&&totalContracts>0)?(perContract*totalContracts).toFixed(2):"";
+  }
+}
+function getFeesTotal(){
+  const fixedEl=document.getElementById("fi-fee-fixed");
+  const varEl=document.getElementById("fi-fee-variable");
+  const fixed=fixedEl?parseFloat(fixedEl.value):NaN;
+  const vari=varEl?parseFloat(varEl.value):NaN;
+  return(isNaN(fixed)?0:fixed)+(isNaN(vari)?0:vari);
+}
 
 // ── Fills (scale-in / scale-out) ──────────────────────────────────────────────
 // A trade can have multiple "fills": each is an Add (opened/scaled in) or an
@@ -2462,14 +2510,14 @@ function fillsSectionHtml(){
       <div class="fillrowhead"><span class="fillnum">${i===0?"entry":"fill "+(i+1)}</span>${form.fills.length>1?`<button type="button" class="fillrm" onclick="removeFillRow(${f.id})" title="remove fill">×</button>`:""}</div>
       <div class="fgrid" style="margin-bottom:8px">
         <div class="field"><label>type</label>
-          <select id="fi-fill-type-${f.id}" onchange="renderFillsSection();refreshRiskPreview();recomputeAutoResult()">
+          <select id="fi-fill-type-${f.id}" onchange="renderFillsSection();recomputeAutoResult();refreshRiskPreview()">
             <option value="add"${isAdd?" selected":""}>Add (opened / scaled in)</option>
             <option value="exit"${!isAdd?" selected":""}>Exit (closed / reduced)</option>
           </select>
         </div>
-        <div class="field"><label>price</label><input id="fi-fill-price-${f.id}" type="number" placeholder="0.00" step="0.01" value="${f.price}" oninput="refreshRiskPreview();recomputeAutoResult()"/></div>
+        <div class="field"><label>price</label><input id="fi-fill-price-${f.id}" type="number" placeholder="0.00" step="0.01" value="${f.price}" oninput="recomputeAutoResult();refreshRiskPreview()"/></div>
         <div class="field"><label>contracts</label>
-          <select id="fi-fill-contracts-${f.id}" onchange="refreshRiskPreview();recomputeAutoResult()">
+          <select id="fi-fill-contracts-${f.id}" onchange="recomputeAutoResult();refreshRiskPreview()">
             ${Array.from({length:10},(_,n)=>n+1).map(n=>`<option value="${n}"${String(f.contracts)===String(n)?" selected":""}>${n}</option>`).join("")}
           </select>
         </div>
@@ -2510,16 +2558,16 @@ function addFillRow(){
   // auto-copy the previous fill's values into the new row — everything stays editable
   form.fills.push({id:nextFillId(),type:last?last.type:"add",price:last?last.price:"",contracts:last?last.contracts:"1",stop:last?last.stop:"",target:last?last.target:""});
   renderFillsSection();
-  refreshRiskPreview();
   recomputeAutoResult();
+  refreshRiskPreview();
 }
 function removeFillRow(id){
   syncFillsFromDOM();
   if(form.fills.length<=1)return;
   form.fills=form.fills.filter(f=>f.id!==id);
   renderFillsSection();
-  refreshRiskPreview();
   recomputeAutoResult();
+  refreshRiskPreview();
 }
 function getFillsSummary(){
   syncFillsFromDOM();
@@ -2549,14 +2597,19 @@ function refreshFillsSummary(){
   if(!s.totalContracts){c.innerHTML="";return;}
   c.innerHTML=`position size <strong>${s.totalContracts}</strong>${!isNaN(s.weightedEntry)?` · avg entry <strong>$${f2(s.weightedEntry)}</strong>`:""}${s.closedContracts>0?` · closed ${s.closedContracts}/${s.totalContracts} @ avg $${f2(s.weightedExit)}`:""}`;
 }
+// Fees are recomputed on every call regardless of resultManual — the fee fields
+// themselves always stay in sync with position size (unless individually
+// overridden), and the auto result (when not manually typed) comes out net of
+// both fee legs so nothing downstream needs its own fee-aware math.
 function recomputeAutoResult(){
   refreshFillsSummary();
+  const s=getFillsSummary();
+  recomputeFees(s.totalContracts||0);
   if(resultManual)return;
   const resEl=document.getElementById("fi-result");
   if(!resEl)return;
-  const s=getFillsSummary();
   if(s.result===null)return;
-  resEl.value=s.result.toFixed(2);
+  resEl.value=(s.result-getFeesTotal()).toFixed(2);
 }
 
 // ── Lightbox (image viewer) — also replaces the old trade-review popup ───────
@@ -3425,8 +3478,8 @@ function refreshRiskPreview(){
   if(s.closedContracts>0&&!isNaN(s.weightedExit)&&riskPts){
     const dirPts=s.direction==="short"?(s.weightedEntry-s.weightedExit):(s.weightedExit-s.weightedEntry);
     const realizedR=dirPts/riskPts;
-    const realizedDollar=dirPts*s.ti.perPoint*s.closedContracts;
-    realizedLine=`<br/>closed ${s.closedContracts}/${contracts} → realized <strong style="color:${realizedDollar>=0?"var(--g)":"var(--r)"}">${cu(realizedDollar)}</strong> (${f2(realizedR)}:1 of planned risk)`;
+    const realizedDollar=dirPts*s.ti.perPoint*s.closedContracts-getFeesTotal(); // net of fees, so this preview matches what fi-result actually saves
+    realizedLine=`<br/>closed ${s.closedContracts}/${contracts} → realized <strong style="color:${realizedDollar>=0?"var(--g)":"var(--r)"}">${cu(realizedDollar)}</strong> (${f2(realizedR)}:1 of planned risk, net of fees)`;
   }
   container.innerHTML=`<div class="eform" style="margin-top:8px">
     ${s.ti.symbol} · $${f2(s.ti.perPoint)}/pt × ${contracts} contract${contracts===1?"":"s"} (position size) · tick $${f2(s.ti.tickDollar)}<br/>
@@ -3650,6 +3703,8 @@ function expandRowH(t){
   const entryStr=t.entryTime?`${dispDate(t.date)} ${t.entryTime}`:dispDate(t.date);
   const exitDateStr=effectiveExitDate(t);
   const exitStr=t.exitTime?`${dispDate(exitDateStr)} ${t.exitTime}`:"—";
+  const feeFixedNum=parseFloat(t.feeFixed),feeVarNum=parseFloat(t.feeVariable);
+  const feesTotal=(isNaN(feeFixedNum)?0:feeFixedNum)+(isNaN(feeVarNum)?0:feeVarNum);
   return`<tr class="exprow"><td colspan="${LOG_COLS}"><div class="exppanel">
     <div class="expmeta">
       <span><strong>Direction</strong> ${dirLabel}</span>
@@ -3658,6 +3713,7 @@ function expandRowH(t){
       <span><strong>Duration</strong> ${fdur(t.durationMin)}</span>
       <span><strong>Realized R</strong> ${t.realizedR!==null?`${f2(t.realizedR)}:1`:"—"}</span>
       <span><strong>Rules score</strong> ${t.rs!==null?pc(t.rs):"—"}</span>
+      ${feesTotal>0?`<span><strong>Fees</strong> ${cu(-feesTotal)} <span style="color:var(--t3)">(${cu(feeFixedNum||0)} fixed${feeVarNum?` + ${cu(feeVarNum)} var`:""})</span></span>`:""}
       ${t.lossCat?`<span><strong>Loss type</strong> ${lcMap[t.lossCat]||""}</span>`:""}
     </div>
     ${t.fills&&t.fills.length>1?`<div class="expmeta" style="margin-top:-6px">${(()=>{
@@ -4031,9 +4087,9 @@ ${showForm?`
   <div class="fgrid">
     <div class="field"><label>date</label><input id="fi-date" type="date" value="${form.date}"/></div>
     <div class="field"><label>entry time</label><input id="fi-entrytime" type="time" value="${form.entryTime||""}"/></div>
-    <div class="field"><label>exit time</label><input id="fi-exittime" type="time" value="${form.exitTime||""}" onchange="refreshRiskPreview();recomputeAutoResult()"/></div>
+    <div class="field"><label>exit time</label><input id="fi-exittime" type="time" value="${form.exitTime||""}" onchange="recomputeAutoResult();refreshRiskPreview()"/></div>
     <div class="field"><label>ticker</label>
-      <select id="fi-ticker" onchange="refreshRiskPreview();recomputeAutoResult()">
+      <select id="fi-ticker" onchange="recomputeAutoResult();refreshRiskPreview()">
         <optgroup label="Micros">
           ${sortedTickers().filter(t=>t.category==="micro").map(t=>`<option value="${t.symbol}"${form.ticker===t.symbol?" selected":""}>${t.symbol}</option>`).join("")}
         </optgroup>
@@ -4065,6 +4121,22 @@ ${showForm?`
     <button type="button" class="topicon" onclick="addFillRow()" aria-label="add fill (scaled in/out)" data-tt="add fill (scaled in/out)" style="flex-shrink:0">${ICON_PLUS}</button>
   </div>
   <div id="fills-section"></div>
+  <div class="fgrid" style="margin-top:10px">
+    <div class="field">
+      <label>non-variable fees ($) <span style="text-transform:none;color:var(--t3)">— commission + NFA + clearing</span></label>
+      <input id="fi-fee-fixed" type="text" inputmode="decimal" placeholder="0.00" value="${form.feeFixed}"
+        style="font-family:var(--sans)"
+        oninput="markFeeFixedManual()"
+        onkeypress="return /[-0-9.]/.test(event.key)||event.key==='Backspace'"/>
+    </div>
+    <div class="field">
+      <label>variable fees ($) <span style="text-transform:none;color:var(--t3)">— exchange fee</span></label>
+      <input id="fi-fee-variable" type="text" inputmode="decimal" placeholder="0.00" value="${form.feeVariable}"
+        style="font-family:var(--sans)"
+        oninput="markFeeVariableManual()"
+        onkeypress="return /[-0-9.]/.test(event.key)||event.key==='Backspace'"/>
+    </div>
+  </div>
   <div class="fgrid" style="margin-top:10px">
     <div class="field">
       <label>result ($)</label>
